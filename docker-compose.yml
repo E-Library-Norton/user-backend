@@ -1,0 +1,30 @@
+# ============================================
+# FILE: docker-compose.yml
+# ============================================
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17
+    container_name: elibrary_db
+    restart: always
+    environment:
+      POSTGRES_USER: samnang
+      POSTGRES_PASSWORD: samnang@77
+      POSTGRES_DB: elibrary_db
+    ports:
+      - "6000:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - elibrary_network
+volumes:
+  postgres_data:
+
+networks:
+  elibrary_network:
+    driver: bridge
+
+
