@@ -6,7 +6,6 @@ module.exports = {
   USER_ROLES: {
     ADMIN: "admin",
     LIBRARIAN: "librarian",
-    FACULTY: "faculty",
     STUDENT: "student",
   },
 

@@ -23,7 +23,7 @@ class AuthController {
   // Register new user
   static async register(req, res, next) {
     try {
-      const { email, password, firstName, lastName, role, universityId } =
+      const { email, password, firstName, lastName, role, studentId } =
         req.body;
 
       // Check if user already exists
@@ -44,7 +44,7 @@ class AuthController {
         firstName,
         lastName,
         role: role || "student",
-        universityId,
+        studentId,
       });
 
       // Generate token
@@ -123,7 +123,7 @@ class AuthController {
         firstName: req.user.firstName,
         lastName: req.user.lastName,
         role: req.user.role,
-        universityId: req.user.universityId,
+        studentId: req.user.studentId,
         createdAt: req.user.createdAt,
       });
     } catch (error) {
@@ -134,12 +134,12 @@ class AuthController {
   // Update profile
   static async updateProfile(req, res, next) {
     try {
-      const { firstName, lastName, universityId } = req.body;
+      const { firstName, lastName, studentId } = req.body;
 
       await req.user.update({
         firstName,
         lastName,
-        universityId,
+        studentId,
       });
 
       return ResponseFormatter.success(
@@ -150,7 +150,7 @@ class AuthController {
           firstName: req.user.firstName,
           lastName: req.user.lastName,
           role: req.user.role,
-          universityId: req.user.universityId,
+          studentId: req.user.studentId,
         },
         "Profile updated successfully!"
       );

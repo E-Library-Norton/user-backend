@@ -144,10 +144,10 @@ class JournalController {
         if (req.files.cover) {
           journalData.coverUrl = `/uploads/covers/${req.files.cover[0].filename}`;
         }
-        if (req.files.pdf) {
-          journalData.pdfUrl = `/uploads/pdfs/${req.files.pdf[0].filename}`;
+        if (req.files.profiles) {
+          journalData.pdfUrl = `/uploads/profiless/${req.files.profiles[0].filename}`;
           journalData.fileSize = Helpers.formatFileSize(
-            req.files.pdf[0].size
+            req.files.profiles[0].size
           );
         }
       }
@@ -184,12 +184,12 @@ class JournalController {
           }
           updateData.coverUrl = `/uploads/covers/${req.files.cover[0].filename}`;
         }
-        if (req.files.pdf) {
+        if (req.files.profiles) {
           if (journal.pdfUrl) {
             await Helpers.deleteFile(`.${journal.pdfUrl}`);
           }
-          updateData.pdfUrl = `/uploads/pdfs/${req.files.pdf[0].filename}`;
-          updateData.fileSize = Helpers.formatFileSize(req.files.pdf[0].size);
+          updateData.pdfUrl = `/uploads/profiles/${req.files.profiles[0].filename}`;
+          updateData.fileSize = Helpers.formatFileSize(req.files.profiles[0].size);
         }
       }
 

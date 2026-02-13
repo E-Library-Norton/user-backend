@@ -36,12 +36,12 @@ const User = sequelize.define(
       field: "last_name",
     },
     role: {
-      type: DataTypes.ENUM("admin", "librarian", "faculty", "student"),
+      type: DataTypes.ENUM("admin", "librarian", "student"),
       defaultValue: "student",
     },
-    universityId: {
+    studentId: {
       type: DataTypes.STRING(50),
-      field: "university_id",
+      field: "student_id",
     },
     isActive: {
       type: DataTypes.BOOLEAN,

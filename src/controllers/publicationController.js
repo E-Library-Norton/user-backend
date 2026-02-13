@@ -127,10 +127,10 @@ class PublicationController {
         if (req.files.cover) {
           publicationData.coverUrl = `/uploads/covers/${req.files.cover[0].filename}`;
         }
-        if (req.files.pdf) {
-          publicationData.pdfUrl = `/uploads/pdfs/${req.files.pdf[0].filename}`;
+        if (req.files.profiles) {
+          publicationData.pdfUrl = `/uploads/profiles/${req.files.profiles[0].filename}`;
           publicationData.fileSize = Helpers.formatFileSize(
-            req.files.pdf[0].size
+            req.files.profiles[0].size
           );
         }
       }
@@ -167,12 +167,12 @@ class PublicationController {
           }
           updateData.coverUrl = `/uploads/covers/${req.files.cover[0].filename}`;
         }
-        if (req.files.pdf) {
+        if (req.files.profiles) {
           if (publication.pdfUrl) {
             await Helpers.deleteFile(`.${publication.pdfUrl}`);
           }
-          updateData.pdfUrl = `/uploads/pdfs/${req.files.pdf[0].filename}`;
-          updateData.fileSize = Helpers.formatFileSize(req.files.pdf[0].size);
+          updateData.pdfUrl = `/uploads/profiless/${req.files.profiles[0].filename}`;
+          updateData.fileSize = Helpers.formatFileSize(req.files.profiles[0].size);
         }
       }
 

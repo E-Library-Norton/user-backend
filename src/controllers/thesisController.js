@@ -129,9 +129,9 @@ class ThesisController {
         if (req.files.cover) {
           thesisData.coverUrl = `/uploads/covers/${req.files.cover[0].filename}`;
         }
-        if (req.files.pdf) {
-          thesisData.pdfUrl = `/uploads/pdfs/${req.files.pdf[0].filename}`;
-          thesisData.fileSize = Helpers.formatFileSize(req.files.pdf[0].size);
+        if (req.files.profiles) {
+          thesisData.pdfUrl = `/uploads/profiles/${req.files.profiles[0].filename}`;
+          thesisData.fileSize = Helpers.formatFileSize(req.files.profiles[0].size);
         }
       }
 
@@ -167,12 +167,12 @@ class ThesisController {
           }
           updateData.coverUrl = `/uploads/covers/${req.files.cover[0].filename}`;
         }
-        if (req.files.pdf) {
+        if (req.files.profiles) {
           if (thesis.pdfUrl) {
             await Helpers.deleteFile(`.${thesis.pdfUrl}`);
           }
-          updateData.pdfUrl = `/uploads/pdfs/${req.files.pdf[0].filename}`;
-          updateData.fileSize = Helpers.formatFileSize(req.files.pdf[0].size);
+          updateData.pdfUrl = `/uploads/profiless/${req.files.profiles[0].filename}`;
+          updateData.fileSize = Helpers.formatFileSize(req.files.profiles[0].size);
         }
       }
 
