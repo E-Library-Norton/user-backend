@@ -48,8 +48,9 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5005;
 
 sequelize
-  .sync({ alter: true })
+  .authenticate()
   .then(() => {
+    console.log("Database connected successfully!");
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
@@ -57,14 +58,3 @@ sequelize
   .catch((err) => {
     console.error("Database connection failed:", err);
   });
-
-
-// CORS Configuration
-// const cors = require('cors');
-
-// app.use(cors({
-//   origin: ['http://localhost:3000', 'http://localhost:3001'], // Add your frontend URLs
-//   credentials: true,
-//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-//   allowedHeaders: ['Content-Type', 'Authorization']
-// }));
