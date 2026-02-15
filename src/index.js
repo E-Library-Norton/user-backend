@@ -8,14 +8,28 @@ const { sequelize } = require("./config/database");
 
 const app = express();
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "E-Library API is running 🚀",
+  });
+});
+
+
 // Middleware
 app.use(helmet());
-app.use(cors());
+// CORS
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "*",
+    credentials: true,
+  })
+);
+// Body parsing
 app.use(express.json());
-
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan("dev"));
-
+// Logging
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 // Static files
 app.use("/uploads", express.static("uploads"));
 
