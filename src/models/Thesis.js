@@ -29,37 +29,6 @@ const Thesis = sequelize.define(
       type: DataTypes.STRING,
       field: "author_kh",
     },
-    // ADDED: Missing fields for complete thesis information
-    supervisor: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    supervisorKh: {
-      type: DataTypes.STRING,
-      field: "supervisor_kh",
-      allowNull: true,
-    },
-    major: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    majorKh: {
-      type: DataTypes.STRING,
-      field: "major_kh",
-      allowNull: true,
-    },
-    type: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-      comment: "e.g., Bachelor, Master, PhD",
-    },
-    university: {
-      type: DataTypes.STRING,
-    },
-    universityKh: {
-      type: DataTypes.STRING,
-      field: "university_kh",
-    },
     year: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -67,20 +36,6 @@ const Thesis = sequelize.define(
         min: 1900,
         max: new Date().getFullYear() + 1,
       },
-    },
-    abstract: {
-      type: DataTypes.TEXT,
-    },
-    abstractKh: {
-      type: DataTypes.TEXT,
-      field: "abstract_kh",
-    },
-    description: {
-      type: DataTypes.TEXT,
-    },
-    descriptionKh: {
-      type: DataTypes.TEXT,
-      field: "description_kh",
     },
     coverUrl: {
       type: DataTypes.STRING(500),
@@ -90,22 +45,12 @@ const Thesis = sequelize.define(
       type: DataTypes.STRING(500),
       field: "pdf_url",
     },
-    category: {
-      type: DataTypes.STRING(100),
+    description: {
+      type: DataTypes.TEXT,
     },
-    // ADDED: Khmer translation for category
-    categoryKh: {
-      type: DataTypes.STRING(100),
-      field: "category_kh",
-      allowNull: true,
-    },
-    tags: {
-      type: DataTypes.JSON,
-      defaultValue: [],
-    },
-    language: {
-      type: DataTypes.STRING(50),
-      defaultValue: "en",
+    descriptionKh: {
+      type: DataTypes.TEXT,
+      field: "description_kh",
     },
     pages: {
       type: DataTypes.INTEGER,
@@ -122,6 +67,10 @@ const Thesis = sequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
+    status: {
+      type: DataTypes.ENUM("published", "draft", "archived"),
+      defaultValue: "draft",
+    },
   },
   {
     tableName: "thesis",
@@ -137,15 +86,6 @@ const Thesis = sequelize.define(
       },
       {
         fields: ["year"],
-      },
-      {
-        fields: ["category"],
-      },
-      {
-        fields: ["university"],
-      },
-      {
-        fields: ["type"],
       },
     ],
   }

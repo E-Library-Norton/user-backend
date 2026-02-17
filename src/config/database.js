@@ -11,6 +11,6 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
       rejectUnauthorized: false, // important for Render
     },
   },
-});
+}); 
 
 module.exports = { sequelize };

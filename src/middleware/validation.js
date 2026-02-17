@@ -5,14 +5,6 @@
 const { body, param, query, validationResult } = require("express-validator");
 const ResponseFormatter = require("../utils/responseFormatter");
 
-// Validation result checker
-// const validate = (req, res, next) => {
-//   const errors = validationResult(req);
-//   if (!errors.isEmpty()) {
-//     return ResponseFormatter.validationError(res, errors.array());
-//   }
-//   next();
-// };
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -36,19 +28,73 @@ const userValidation = {
       .withMessage("Password must be at least 6 characters"),
     body("firstName").trim().notEmpty().withMessage("First name is required"),
     body("lastName").trim().notEmpty().withMessage("Last name is required"),
-    body("role")
-      .optional()
-      .isIn(["admin", "librarian", "faculty", "student"])
-      .withMessage("Invalid role"),
+    body("studentId").optional().trim(),
+
     validate,
   ],
 
   login: [
-    body("email")
-      .isEmail()
-      .normalizeEmail()
-      .withMessage("Valid email is required"),
-    body("password").notEmpty().withMessage("Password is required"),
+    body("identifier").trim().notEmpty().withMessage("identifier (email / username / studentId) is required"),
+    body("password").notEmpty().withMessage("password is required"),
+    validate,
+  ],
+};
+
+// Role validation rules
+const userRules = {
+  create: [
+    body("username").trim().notEmpty().withMessage("username is required"),
+    body("email").trim().isEmail().withMessage("valid email is required").normalizeEmail(),
+    body("password").isLength({ min: 6 }).withMessage("password must be at least 6 characters"),
+    body("roleIds").optional().isArray().withMessage("roleIds must be an array"),
+    validate,
+  ],
+
+  update: [
+    param("id").isInt({ min: 1 }).withMessage("valid user id is required"),
+    body("firstName").optional().trim(),
+    body("lastName").optional().trim(),
+    body("studentId").optional().trim(),
+    body("isActive").optional().isBoolean().withMessage("isActive must be boolean"),
+    body("roleIds").optional().isArray().withMessage("roleIds must be an array"),
+    validate,
+  ],
+
+  id: [
+    param("id").isInt({ min: 1 }).withMessage("valid user id is required"),
+    validate,
+  ],
+
+  assignRoles: [
+    param("id").isInt({ min: 1 }).withMessage("valid user id is required"),
+    body("roleIds").isArray({ min: 0 }).withMessage("roleIds must be an array"),
+      validate,
+  ],
+
+  assignPermissions: [
+    param("id").isInt({ min: 1 }).withMessage("valid user id is required"),
+    body("permissionIds").isArray({ min: 0 }).withMessage("permissionIds must be an array"),
+    validate,
+  ],
+};
+
+// Permission validation rules
+const permissionRules = {
+  create: [
+    body("name").trim().notEmpty().withMessage("name is required"),
+    body("description").optional().trim(),
+    validate,
+  ],
+
+  update: [
+    param("id").isInt({ min: 1 }).withMessage("valid permission id is required"),
+    body("name").optional().trim().notEmpty().withMessage("name cannot be empty"),
+    body("description").optional().trim(),
+    validate,
+  ],
+
+  id: [
+    param("id").isInt({ min: 1 }).withMessage("valid permission id is required"),
     validate,
   ],
 };
@@ -120,31 +166,6 @@ const journalValidation = {
   update: [param("id").isInt().withMessage("Valid ID is required"), validate],
 };
 
-// Audio validation rules
-const audioValidation = {
-  create: [
-    body("title").trim().notEmpty().withMessage("Title is required"),
-    body("speaker").optional().trim(),
-    body("duration").optional(),
-    body("category").optional().trim(),
-    validate,
-  ],
-
-  update: [param("id").isInt().withMessage("Valid ID is required"), validate],
-};
-
-// Video validation rules
-const videoValidation = {
-  create: [
-    body("title").trim().notEmpty().withMessage("Title is required"),
-    body("instructor").optional().trim(),
-    body("duration").optional(),
-    body("category").optional().trim(),
-    validate,
-  ],
-
-  update: [param("id").isInt().withMessage("Valid ID is required"), validate],
-};
 
 // Query validation
 const queryValidation = {
@@ -179,11 +200,11 @@ const idValidation = [
 module.exports = {
   validate,
   userValidation,
+  userRules,
+  permissionRules,
   thesisValidation,
   publicationValidation,
   journalValidation,
-  audioValidation,
-  videoValidation,
   queryValidation,
   idValidation,
 };

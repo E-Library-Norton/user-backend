@@ -17,7 +17,13 @@ const authenticate = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findByPk(decoded.userId);
+
+    const user = await User.findByPk(decoded.id, {
+      include: [
+        { association: "Roles",       through: { attributes: [] } },
+        { association: "Permissions", through: { attributes: [] } },
+      ],
+    });
 
     if (!user || !user.isActive) {
       return ResponseFormatter.unauthorized(res, "Invalid authentication");
@@ -40,13 +46,34 @@ const authorize = (...allowedRoles) => {
       return ResponseFormatter.unauthorized(res, "Authentication required");
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const userRoles = (req.user.Roles || []).map((r) => r.name);
+    const hasRole = allowedRoles.some((role) => userRoles.includes(role));
+
+    if (!hasRole) {
       return ResponseFormatter.forbidden(
         res,
         "You do not have permission to perform this action"
       );
     }
 
+    next();
+  };
+};
+
+/**
+ * requirePermission(name)
+ * Allow only users who have the given permission (from roles or direct assignment).
+ *
+ * Usage: router.get("/", authenticate, requirePermission("view_users"), handler)
+ */
+const requirePermission = (permissionName) => {
+  return async (req, res, next) => {
+    if (!req.user) return ResponseFormatter.unauthorized(res, "Authentication required");
+
+    const hasPermission = await req.user.hasPermission(permissionName);
+    if (!hasPermission) {
+      return ResponseFormatter.forbidden(res, `Permission required: ${permissionName}`);
+    }
     next();
   };
 };
@@ -74,5 +101,6 @@ const optionalAuth = async (req, res, next) => {
 module.exports = {
   authenticate,
   authorize,
+  requirePermission,
   optionalAuth,
 };

@@ -35,12 +35,13 @@ app.use("/uploads", express.static("uploads"));
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));
+// app.use("/api/users", require("./routes/users"));
+// app.use("/api/roles", require("./routes/roles"));
+// app.use("/api/permissions", require("./routes/permissions"));
 app.use("/api/categories", require("./routes/categories"));
 app.use("/api/thesis", require("./routes/thesis"));
 app.use("/api/publications", require("./routes/publications"));
 app.use("/api/journals", require("./routes/journals"));
-app.use("/api/audios", require("./routes/audios"));
-app.use("/api/videos", require("./routes/videos"));
 app.use("/api/search", require("./routes/search"));
 app.use("/api/stats", require("./routes/stats"));
 app.use("/api/upload", require("./routes/upload"));

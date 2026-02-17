@@ -1,52 +1,51 @@
-// ============================================
-// FILE: src/models/User.js
-// ============================================
-
+// src/models/User.js
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
 const bcrypt = require("bcryptjs");
+const { Op } = require("sequelize");
 
 const User = sequelize.define(
   "User",
   {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
       primaryKey: true,
       autoIncrement: true,
     },
     email: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(256),
+      allowNull: false,
       unique: true,
+    },
+    password: {
+      type: DataTypes.STRING(256),
       allowNull: false,
-      validate: {
-        isEmail: true,
-      },
-    },
-    passwordHash: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      field: "password_hash",
-    },
-    firstName: {
-      type: DataTypes.STRING(100),
-      field: "first_name",
-    },
-    lastName: {
-      type: DataTypes.STRING(100),
-      field: "last_name",
-    },
-    role: {
-      type: DataTypes.ENUM("admin", "librarian", "student"),
-      defaultValue: "student",
     },
     studentId: {
       type: DataTypes.STRING(50),
       field: "student_id",
+      unique: true,
+      allowNull: true,
+    },
+    firstName: {
+      type: DataTypes.TEXT,
+      field: "first_name",
+      allowNull: true,
+    },
+    lastName: {
+      type: DataTypes.TEXT,
+      field: "last_name",
+      allowNull: true,
     },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
       field: "is_active",
+    },
+    isDeleted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: "is_deleted",
     },
   },
   {
@@ -54,33 +53,97 @@ const User = sequelize.define(
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
+    // Automatically exclude soft-deleted users from every query
+    defaultScope: {
+      where: { isDeleted: false },
+    },
   }
 );
 
-// Hash password before creating user
+// ── Hooks 
+
 User.beforeCreate(async (user) => {
-  if (user.passwordHash) {
-    user.passwordHash = await bcrypt.hash(user.passwordHash, 10);
+  if (user.password) {
+    user.password = await bcrypt.hash(user.password, 20);
   }
 });
 
-// Hash password before updating if changed
 User.beforeUpdate(async (user) => {
-  if (user.changed("passwordHash")) {
-    user.passwordHash = await bcrypt.hash(user.passwordHash, 10);
+  if (user.changed("password")) {
+    user.password = await bcrypt.hash(user.password, 20);
   }
 });
 
-// Instance method to validate password
-User.prototype.validatePassword = async function (password) {
-  return await bcrypt.compare(password, this.passwordHash);
+// ── Instance methods 
+
+// // Never expose the hashed password in responses
+// User.prototype.toJSON = function () {
+//   const values = Object.assign({}, this.get());
+//   delete values.password;
+//   return values;
+// };
+
+// // Compare plain-text password against the stored hash
+// User.prototype.validatePassword = function (plain) {
+//   return bcrypt.compare(plain, this.password);
+// };
+
+// Collect all permission names from roles + direct permissions
+User.prototype.getRolesAndPermissions = async function () {
+  const roles = await this.getRoles({ include: [{ association: "Permissions" }] });
+  const directPermissions = await this.getPermissions();
+
+  const rolePermNames = roles.flatMap((r) => (r.Permissions || []).map((p) => p.name));
+  const directPermNames = directPermissions.map((p) => p.name);
+
+  return {
+    roles: roles.map((r) => r.name),
+    permissions: [...new Set([...directPermNames, ...rolePermNames])],
+  };
 };
 
-// Instance method to get public profile
-User.prototype.toJSON = function () {
-  const values = Object.assign({}, this.get());
-  delete values.passwordHash;
-  return values;
+User.prototype.hasPermission = async function (permissionName) {
+  const { permissions } = await this.getRolesAndPermissions();
+  return permissions.includes(permissionName);
+};
+
+// ── Class methods 
+
+// Login can be done with email, username, or studentId
+User.findByLoginIdentifier = function (identifier) {
+  return this.findOne({
+    where: {
+      [Op.or]: [
+        { email: identifier },
+        { username: identifier },
+        { studentId: identifier },
+      ],
+    },
+  });
+};
+
+// ── Associations (called by models/index.js) 
+
+User.associate = function (models) {
+  // User.hasMany(models.RefreshToken, {
+  //   foreignKey: "user_id",
+  //   as: "refreshTokens",
+  //   onDelete: "CASCADE",
+  // });
+  User.belongsToMany(models.Role, {
+    through: "users_roles",
+    foreignKey: "user_id",
+    otherKey: "role_id",
+    as: "Roles",
+    timestamps: false,
+  });
+  User.belongsToMany(models.Permission, {
+    through: "users_permissions",
+    foreignKey: "user_id",
+    otherKey: "permission_id",
+    as: "Permissions",
+    timestamps: false,
+  });
 };
 
 module.exports = User;
