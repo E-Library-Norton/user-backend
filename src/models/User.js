@@ -12,6 +12,11 @@ const User = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    username: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+    },
     email: {
       type: DataTypes.STRING(256),
       allowNull: false,
@@ -64,29 +69,29 @@ const User = sequelize.define(
 
 User.beforeCreate(async (user) => {
   if (user.password) {
-    user.password = await bcrypt.hash(user.password, 20);
+    user.password = await bcrypt.hash(user.password, 10);
   }
 });
 
 User.beforeUpdate(async (user) => {
   if (user.changed("password")) {
-    user.password = await bcrypt.hash(user.password, 20);
+    user.password = await bcrypt.hash(user.password, 10);
   }
 });
 
 // ── Instance methods 
 
-// // Never expose the hashed password in responses
-// User.prototype.toJSON = function () {
-//   const values = Object.assign({}, this.get());
-//   delete values.password;
-//   return values;
-// };
+// Never expose the hashed password in responses
+User.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+  delete values.password;
+  return values;
+};
 
-// // Compare plain-text password against the stored hash
-// User.prototype.validatePassword = function (plain) {
-//   return bcrypt.compare(plain, this.password);
-// };
+// Compare plain-text password against the stored hash
+User.prototype.validatePassword = function (plain) {
+  return bcrypt.compare(plain, this.password);
+};
 
 // Collect all permission names from roles + direct permissions
 User.prototype.getRolesAndPermissions = async function () {

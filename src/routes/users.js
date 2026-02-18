@@ -10,7 +10,7 @@ const { userRules } = require("../middleware/validation");
 router.use(authenticate);
 
 router.get  ("/",    requirePermission("view_users"),   UserController.getAll);
-router.get  ("/:id", userRules.id,   requirePermission("view_users"),   UserController.getOne);
+router.get  ("/:id", userRules.id,   requirePermission("view_users"),   UserController.getById);
 router.post ("/",    userRules.create, requirePermission("create_users"), UserController.create);
 router.put  ("/:id", userRules.update, requirePermission("update_users"), UserController.update);
 router.delete("/:id", userRules.id,  requirePermission("delete_users"), UserController.delete);

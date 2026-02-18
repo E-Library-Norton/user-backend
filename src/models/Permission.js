@@ -6,7 +6,7 @@ const Permission = sequelize.define(
   "Permission",
   {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
       primaryKey: true,
       autoIncrement: true,
     },
@@ -22,9 +22,7 @@ const Permission = sequelize.define(
   },
   {
     tableName: "permissions",
-    timestamps: true,
-    createdAt: "created_at",
-    updatedAt: "updated_at",
+    timestamps: false,
   }
 );
 

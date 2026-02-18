@@ -6,7 +6,7 @@ const Role = sequelize.define(
   "Role",
   {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
       primaryKey: true,
       autoIncrement: true,
     },
@@ -22,9 +22,7 @@ const Role = sequelize.define(
   },
   {
     tableName: "roles",
-    timestamps: true,
-    createdAt: "created_at",
-    updatedAt: "updated_at",
+    timestamps: false,
   }
 );
 

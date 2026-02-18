@@ -1,12 +1,16 @@
 // src/controllers/permissionController.js
 const { Permission } = require("../models");
 const ResponseFormatter = require("../utils/responseFormatter");
+const { NotFoundError, ConflictError } = require("../utils/errors");
 
 class PermissionController {
   // ── GET /api/permissions ─────────────────────────────────────────────────────
   static async getAll(req, res, next) {
     try {
-      const permissions = await Permission.findAll({ order: [["name", "ASC"]] });
+      const permissions = await Permission.findAll({
+        include: [{ association: "Roles", through: { attributes: [] } }],
+        order: [["name", "ASC"]],
+      });
       return ResponseFormatter.success(res, permissions);
     } catch (err) {
       next(err);
@@ -35,7 +39,7 @@ class PermissionController {
       if (existing) throw new ConflictError(`Permission '${name}' already exists`);
 
       const permission = await Permission.create({ name, description });
-      return ResponseFormatter.created(res, permission, "Permission created");
+      return ResponseFormatter.success(res, permission, "Permission created", 201);
     } catch (err) {
       next(err);
     }
@@ -68,7 +72,7 @@ class PermissionController {
       if (!permission) throw new NotFoundError("Permission not found");
 
       await permission.destroy();
-      return ResponseFormatter.success(res, null, "Permission deleted");
+      return ResponseFormatter.noContent(res, null, "Permission deleted");
     } catch (err) {
       next(err);
     }

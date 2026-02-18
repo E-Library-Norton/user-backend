@@ -1,190 +1,212 @@
-// ============================================
-// FILE: src/controllers/authController.js
-// ============================================
-
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+const { Op } = require("sequelize");
+const { User, Role } = require("../models");
 const ResponseFormatter = require("../utils/responseFormatter");
+const { ValidationError, AuthenticationError, NotFoundError } = require("../utils/errors");
 
 class AuthController {
-  // Generate JWT token
-  static generateToken(user) {
+
+  // ── Generate Access Token (short-lived: 15m)
+  static generateAccessToken(user) {
     return jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || "7d" }
+      { id: user.id },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m" }
     );
   }
 
-  // Register new user
+  // ── Generate Refresh Token (long-lived: 7d)
+  static generateRefreshToken(user) {
+    return jwt.sign(
+      { id: user.id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "7d" }
+    );
+  }
+
+  // ── POST /api/auth/register
   static async register(req, res, next) {
     try {
-      const { email, password, firstName, lastName, role, studentId } =
-        req.body;
+      const { username, email, password, firstName, lastName, studentId } = req.body;
 
-      // Check if user already exists
-      const existingUser = await User.findOne({ where: { email } });
-      if (existingUser) {
-        return ResponseFormatter.error(
-          res,
-          "Email already registered",
-          400,
-          "DUPLICATE_EMAIL"
-        );
-      }
-
-      // Create user
-      const user = await User.create({
-        email,
-        passwordHash: password,
-        firstName,
-        lastName,
-        role: role || "student",
-        studentId,
+      const existing = await User.findOne({
+        where: { [Op.or]: [{ username }, { email }, { studentId }] },
       });
+      if (existing) throw new ValidationError("Username, Email or Student ID already registered");
 
-      // Generate token
-      const token = AuthController.generateToken(user);
+      const user = await User.create({ username, email, password, firstName, lastName, studentId });
 
-      return ResponseFormatter.success(
-        res,
-        {
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-          },
-          token,
+      const studentRole = await Role.findOne({ where: { name: "student" } });
+      if (studentRole) await user.addRole(studentRole);
+
+      return ResponseFormatter.success(res, {
+        user: {
+          id:        user.id,
+          username:  user.username,
+          email:     user.email,
+          studentId: user.studentId,
         },
-        "User registered successfully!",
-        201
-      );
-    } catch (error) {
-      next(error);
+      }, "Registration successful", 201);
+
+    } catch (err) {
+      next(err);
     }
   }
 
-  // Login user
+  // ── POST /api/auth/login
   static async login(req, res, next) {
     try {
-      const { email, password } = req.body;
+      const { identifier, password } = req.body;
 
-      // Find user
-      const user = await User.findOne({ where: { email } });
-      if (!user) {
-        return ResponseFormatter.unauthorized(res, "Invalid email or password");
-      }
-
-      // Check if user is active
-      if (!user.isActive) {
-        return ResponseFormatter.forbidden(res, "Account is deactivated");
-      }
-
-      // Validate password
-      const isValidPassword = await user.validatePassword(password);
-      if (!isValidPassword) {
-        return ResponseFormatter.unauthorized(res, "Invalid email or password");
-      }
-
-      // Generate token
-      const token = AuthController.generateToken(user);
-
-      return ResponseFormatter.success(
-        res,
-        {
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-          },
-          token,
+      const user = await User.findOne({
+        where: {
+          [Op.or]: [
+            { username:  identifier },
+            { email:     identifier },
+            { studentId: identifier },
+          ],
         },
-        "Login successfully!"
-      );
-    } catch (error) {
-      next(error);
+        include: { association: "Roles" },
+      });
+
+      if (!user || !(await user.validatePassword(password))) {
+        throw new AuthenticationError("Invalid credentials");
+      }
+
+      if (!user.isActive) {
+        throw new AuthenticationError("Account is deactivated");
+      }
+
+      // ✅ Generate both tokens — no DB storage needed
+      const accessToken  = AuthController.generateAccessToken(user);
+      const refreshToken = AuthController.generateRefreshToken(user);
+
+      return ResponseFormatter.success(res, {
+        user: {
+          id:        user.id,
+          username:  user.username,
+          email:     user.email,
+          studentId: user.studentId,
+          roles:     user.Roles.map((r) => r.name),
+        },
+        accessToken,
+        refreshToken,
+      }, "Login successful");
+
+    } catch (err) {
+      next(err);
     }
   }
 
-  // Get current user profile
+  // ── POST /api/auth/refresh
+  // Client sends refreshToken → verifies signature only → returns new accessToken
+  static async refresh(req, res, next) {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) throw new ValidationError("refreshToken is required");
+
+      // Verify signature + expiry — no DB lookup needed
+      let decoded;
+      try {
+        decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+      } catch {
+        throw new AuthenticationError("Invalid or expired refresh token");
+      }
+
+      // Still check user is active (edge case: account disabled after token issued)
+      const user = await User.findByPk(decoded.id);
+      if (!user)          throw new AuthenticationError("User not found");
+      if (!user.isActive) throw new AuthenticationError("Account is deactivated");
+
+      const accessToken = AuthController.generateAccessToken(user);
+
+      return ResponseFormatter.success(res, { accessToken }, "Token refreshed");
+
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // ── POST /api/auth/logout
+  // Stateless: just tell the client to delete both tokens from storage
+  static async logout(req, res, next) {
+    try {
+      return ResponseFormatter.success(res, null, "Logged out successfully");
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // ── GET /api/auth/profile
   static async getProfile(req, res, next) {
     try {
-      return ResponseFormatter.success(res, {
-        id: req.user.id,
-        email: req.user.email,
-        firstName: req.user.firstName,
-        lastName: req.user.lastName,
-        role: req.user.role,
-        studentId: req.user.studentId,
-        createdAt: req.user.createdAt,
+      const user = await User.findByPk(req.user.id, {
+        include: { association: "Roles", through: { attributes: [] } },
       });
-    } catch (error) {
-      next(error);
+
+      if (!user) throw new NotFoundError("User not found");
+
+      return ResponseFormatter.success(res, {
+        id:        user.id,
+        username:  user.username,
+        email:     user.email,
+        studentId: user.studentId,
+        firstName: user.firstName,
+        lastName:  user.lastName,
+        roles:     user.Roles.map((r) => r.name),
+        createdAt: user.createdAt,
+      });
+
+    } catch (err) {
+      next(err);
     }
   }
 
-  // Update profile
+  // ── PUT /api/auth/profile
   static async updateProfile(req, res, next) {
     try {
       const { firstName, lastName, studentId } = req.body;
 
-      await req.user.update({
-        firstName,
-        lastName,
-        studentId,
-      });
+      const user = await User.findByPk(req.user.id);
+      if (!user) throw new NotFoundError("User not found");
 
-      return ResponseFormatter.success(
-        res,
-        {
-          id: req.user.id,
-          email: req.user.email,
-          firstName: req.user.firstName,
-          lastName: req.user.lastName,
-          role: req.user.role,
-          studentId: req.user.studentId,
-        },
-        "Profile updated successfully!"
-      );
-    } catch (error) {
-      next(error);
+      await user.update({ firstName, lastName, studentId });
+
+      return ResponseFormatter.success(res, {
+        id:        user.id,
+        email:     user.email,
+        studentId: user.studentId,
+        firstName: user.firstName,
+        lastName:  user.lastName,
+      }, "Profile updated successfully");
+
+    } catch (err) {
+      next(err);
     }
   }
 
-  // Change password
+  // ── PUT /api/auth/change-password
   static async changePassword(req, res, next) {
     try {
-      const { currentPassword, newPassword } = req.body;
+      const { currentPassword, newPassword, confirmPassword } = req.body;
 
-      // Validate current password
-      const isValid = await req.user.validatePassword(currentPassword);
-      if (!isValid) {
-        return ResponseFormatter.error(
-          res,
-          "Current password is incorrect",
-          400,
-          "INVALID_PASSWORD"
-        );
+      if (newPassword !== confirmPassword) {
+        throw new ValidationError("New passwords do not match");
       }
 
-      // Update password
-      await req.user.update({ passwordHash: newPassword });
+      const user = await User.findByPk(req.user.id);
+      if (!user) throw new NotFoundError("User not found");
 
-      return ResponseFormatter.success(
-        res,
-        null,
-        "Password changed successfully!"
-      );
-    } catch (error) {
-      next(error);
+      if (!(await user.validatePassword(currentPassword))) {
+        throw new ValidationError("Current password is incorrect");
+      }
+
+      await user.update({ password: newPassword });
+
+      return ResponseFormatter.success(res, null, "Password changed successfully");
+
+    } catch (err) {
+      next(err);
     }
   }
 }

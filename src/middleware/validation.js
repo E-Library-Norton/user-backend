@@ -19,6 +19,7 @@ const validate = (req, res, next) => {
 // User validation rules
 const userValidation = {
   register: [
+    body("username").trim().notEmpty().withMessage("Username is required"),
     body("email")
       .isEmail()
       .normalizeEmail()
@@ -34,7 +35,7 @@ const userValidation = {
   ],
 
   login: [
-    body("identifier").trim().notEmpty().withMessage("identifier (email / username / studentId) is required"),
+    body("identifier").trim().notEmpty().withMessage("identifier (email / studentId) is required"),
     body("password").notEmpty().withMessage("password is required"),
     validate,
   ],
@@ -43,7 +44,6 @@ const userValidation = {
 // Role validation rules
 const userRules = {
   create: [
-    body("username").trim().notEmpty().withMessage("username is required"),
     body("email").trim().isEmail().withMessage("valid email is required").normalizeEmail(),
     body("password").isLength({ min: 6 }).withMessage("password must be at least 6 characters"),
     body("roleIds").optional().isArray().withMessage("roleIds must be an array"),
@@ -73,6 +73,11 @@ const userRules = {
 
   assignPermissions: [
     param("id").isInt({ min: 1 }).withMessage("valid user id is required"),
+    body("permissionIds").isArray({ min: 0 }).withMessage("permissionIds must be an array"),
+    validate,
+  ],
+  assignRolePermissions: [
+    param("id").isInt({ min: 1 }).withMessage("valid role id is required"),
     body("permissionIds").isArray({ min: 0 }).withMessage("permissionIds must be an array"),
     validate,
   ],
