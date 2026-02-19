@@ -8,8 +8,15 @@ class AuthController {
 
   // ── Generate Access Token (short-lived: 15m)
   static generateAccessToken(user) {
+    const roles = (user.Roles || []).map((r) => r.name);
     return jwt.sign(
-      { id: user.id },
+      {
+        id:       user.id,
+        username: user.username,
+        email:    user.email,
+        studentId: user.studentId,
+        roles,
+      },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m" }
     );
