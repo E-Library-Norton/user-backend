@@ -84,7 +84,6 @@ class AuthController {
         throw new AuthenticationError("Account is deactivated");
       }
 
-      // ✅ Generate both tokens — no DB storage needed
       const accessToken  = AuthController.generateAccessToken(user);
       const refreshToken = AuthController.generateRefreshToken(user);
 

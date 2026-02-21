@@ -7,9 +7,9 @@ const { authenticate, requirePermission, authorize } = require("../middleware/au
 const { userRules } = require("../middleware/validation");
 
 // All user routes require a valid token
+router.get  ("/",       UserController.getAll);
 router.use(authenticate);
 
-router.get  ("/",    requirePermission("view_users"),   UserController.getAll);
 router.get  ("/:id", userRules.id,   requirePermission("view_users"),   UserController.getById);
 router.post ("/",    userRules.create, requirePermission("create_users"), UserController.create);
 router.put  ("/:id", userRules.update, requirePermission("update_users"), UserController.update);

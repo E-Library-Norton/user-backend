@@ -25,8 +25,8 @@ const userValidation = {
       .normalizeEmail()
       .withMessage("Valid email is required"),
     body("password")
-      .isLength({ min: 6 })
-      .withMessage("Password must be at least 6 characters"),
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 8 characters"),
     body("firstName").trim().notEmpty().withMessage("First name is required"),
     body("lastName").trim().notEmpty().withMessage("Last name is required"),
     body("studentId").optional().trim(),
@@ -45,7 +45,7 @@ const userValidation = {
 const userRules = {
   create: [
     body("email").trim().isEmail().withMessage("valid email is required").normalizeEmail(),
-    body("password").isLength({ min: 6 }).withMessage("password must be at least 6 characters"),
+    body("password").isLength({ min: 8 }).withMessage("password must be at least 8 characters"),
     body("roleIds").optional().isArray().withMessage("roleIds must be an array"),
     validate,
   ],
