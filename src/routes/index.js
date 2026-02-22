@@ -1,47 +1,64 @@
-// ============================================
-// FILE: src/routes/index.js
-// ============================================
+// src/routes/index.js
+const express = require('express');
+const router  = express.Router();
 
-const express = require("express");
-const router = express.Router();
+// Auth routes
+const authRoutes       = require('./auth');
 
-// Import all route modules
-const authRoutes = require("./auth");
-// const userRoutes = require("./users");
-// const roleRoutes = require("./roles");
-// const permissionRoutes = require("./permissions");
-const thesisRoutes = require("./thesis");
-const journalsRoutes = require("./journals");
-const categoriesRoutes = require("./categories");
-const searchRoutes = require("./search");
-const statsRoutes = require("./stats");
+// ── RBAC routes 
+const userRoutes       = require('./users');
+const roleRoutes       = require('./roles');
+const permissionRoutes = require('./permissions');
 
-// Mount routes
-router.use("/auth", authRoutes);
-// router.use("/users", userRoutes);
-// router.use("/roles", roleRoutes);
-// router.use("/permissions", permissionRoutes);
-router.use("/thesis", thesisRoutes);
-router.use("/journals", journalsRoutes);
-router.use("/categories", categoriesRoutes);
-router.use("/search", searchRoutes);
-router.use("/stats", statsRoutes);
+// ── Library / Book routes 
+const bookRoutes         = require('./books');
+const categoriesRoutes = require('./categories');
+const authorRoutes       = require('./authors');
+const publisherRoutes    = require('./publishers');
+const materialTypeRoutes = require('./materialTypes');
+const departmentRoutes   = require('./departments');
+const downloadRoutes     = require('./downloads');
 
-// API info endpoint
-router.get("/", (req, res) => {
+// ── Mount 
+
+// Auth
+router.use('/auth', authRoutes);
+
+// RBAC
+router.use('/users',       userRoutes);
+router.use('/roles',       roleRoutes);
+router.use('/permissions', permissionRoutes);
+
+
+// Library
+router.use('/books',          bookRoutes);
+router.use('/categories',     categoriesRoutes);
+router.use('/authors',        authorRoutes);
+router.use('/publishers',     publisherRoutes);
+router.use('/material-types', materialTypeRoutes);
+router.use('/departments',    departmentRoutes);
+router.use('/downloads',      downloadRoutes);
+
+// ── API info ──────────────────────────────────────────────────────────────────
+router.get('/', (req, res) => {
   res.json({
-    name: "E-Library API",
-    version: "1.0.0",
+    name:    'E-Library API',
+    version: '1.0.0',
     endpoints: {
-      // auth: "/api/auth",
-      // users: "/api/users",
-      // roles: "/api/roles",
-      // permissions: "/api/permissions",
-      thesis: "/api/thesis",
-      journals: "/api/journals",
-      categories: "/api/categories",
-      search: "/api/search",
-      stats: "/api/stats",
+      // Auth
+      auth:         '/api/auth',
+      // RBAC
+      users:        '/api/users',
+      roles:        '/api/roles',
+      permissions:  '/api/permissions',
+      // Library
+      books:        '/api/books',
+      categories:   '/api/categories',
+      authors:      '/api/authors',
+      publishers:   '/api/publishers',
+      materialTypes:'/api/material-types',
+      departments:  '/api/departments',
+      downloads:    '/api/downloads',
     },
   });
 });

@@ -15,9 +15,6 @@ app.get("/", (req, res) => {
   });
 });
 
-
-// Middleware
-app.use(helmet());
 // CORS
 app.use(cors({
   origin: [
@@ -28,26 +25,27 @@ app.use(cors({
   methods:        ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-// Body parsing
+
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// Logging
-app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
-// Static files
-app.use("/uploads", express.static("uploads"));
+app.use(morgan('dev'));
+app.use('/uploads', express.static('uploads'));
 
-// Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/users", require("./routes/users"));
-app.use("/api/roles", require("./routes/roles"));
-app.use("/api/permissions", require("./routes/permissions"));
-app.use("/api/categories", require("./routes/categories"));
-app.use("/api/thesis", require("./routes/thesis"));
-app.use("/api/publications", require("./routes/publications"));
-app.use("/api/journals", require("./routes/journals"));
-app.use("/api/search", require("./routes/search"));
-app.use("/api/stats", require("./routes/stats"));
-app.use("/api/upload", require("./routes/upload"));
+// ── RBAC routes 
+app.use('/api/auth',         require('./routes/auth'));
+app.use('/api/users',        require('./routes/users'));
+app.use('/api/roles',        require('./routes/roles'));
+app.use('/api/permissions',  require('./routes/permissions'));
+
+// ── Library routes 
+app.use('/api/books',          require('./routes/books'));
+app.use('/api/authors',        require('./routes/authors'));
+app.use('/api/categories',     require('./routes/categories'));
+app.use('/api/publishers',     require('./routes/publishers'));
+app.use('/api/material-types', require('./routes/materialTypes'));
+app.use('/api/departments',    require('./routes/departments'));
+app.use('/api/downloads',      require('./routes/downloads'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

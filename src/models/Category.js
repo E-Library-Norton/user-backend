@@ -14,36 +14,18 @@ const Category = sequelize.define(
       autoIncrement: true,
     },
     name: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(255),
       allowNull: false,
+      unique: true,
     },
     nameKh: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(255),
       field: "name_kh",
-    },
-    icon: {
-      type: DataTypes.STRING(50),
-    },
-    type: {
-      type: DataTypes.ENUM(
-        "thesis",
-        "publication",
-        "audio",
-        "journal",
-        "video"
-      ),
-      allowNull: false,
-    },
-    count: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
     },
   },
   {
     tableName: "categories",
-    timestamps: true,
-    createdAt: "created_at",
-    updatedAt: "updated_at",
+    timestamps: false,
   }
 );
 

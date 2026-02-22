@@ -10,12 +10,14 @@ const { idValidation } = require("../middleware/validation");
 
 router.get("/", CategoryController.getAll);
 
-router.post("/", authenticate, authorize("admin"), CategoryController.create);
+router.get("/:id", idValidation, CategoryController.getById);
+
+router.post("/", authenticate, authorize("admin", "librarian"), CategoryController.create);
 
 router.put(
   "/:id",
-  authenticate, 
-  authorize("admin"),
+  authenticate,
+  authorize("admin", "librarian"),
   idValidation,
   CategoryController.update
 );
