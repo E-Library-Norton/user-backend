@@ -13,9 +13,9 @@ class DownloadController {
       if (!book) throw new NotFoundError('Book not found');
 
       const ipAddress = req.ip || req.headers['x-forwarded-for'];
-      const download  = await Download.create({
-        userId:    req.user.id,
-        bookId:    book.id,
+      const download = await Download.create({
+        userId: req.user.id,
+        bookId: book.id,
         ipAddress,
       });
 
@@ -26,7 +26,7 @@ class DownloadController {
   // GET /api/downloads — admin: all downloads with pagination + filters
   static async getAll(req, res, next) {
     try {
-      const { page = 1, limit = 20, userId, bookId, from, to } = req.query;
+      const { page = 1, limit = 10, userId, bookId, from, to } = req.query;
       const where = {};
 
       if (userId) where.userId = userId;
@@ -34,7 +34,7 @@ class DownloadController {
       if (from || to) {
         where.downloadedAt = {};
         if (from) where.downloadedAt[Op.gte] = new Date(from);
-        if (to)   where.downloadedAt[Op.lte] = new Date(to);
+        if (to) where.downloadedAt[Op.lte] = new Date(to);
       }
 
       const offset = (Number(page) - 1) * Number(limit);
@@ -44,16 +44,16 @@ class DownloadController {
           { model: User, as: 'User', attributes: ['id', 'username', 'email', 'studentId'] },
           { model: Book, as: 'Book', attributes: ['id', 'title', 'isbn'] },
         ],
-        order:  [['downloadedAt', 'DESC']],
-        limit:  Number(limit),
+        order: [['downloadedAt', 'DESC']],
+        limit: Number(limit),
         offset,
       });
 
       return ResponseFormatter.success(res, {
-        downloads:  rows,
-        total:      count,
-        page:       Number(page),
-        limit:      Number(limit),
+        downloads: rows,
+        total: count,
+        page: Number(page),
+        limit: Number(limit),
         totalPages: Math.ceil(count / Number(limit)),
       });
     } catch (err) { next(err); }
@@ -62,14 +62,14 @@ class DownloadController {
   // GET /api/downloads/my — current user's download history
   static async getMyDownloads(req, res, next) {
     try {
-      const { page = 1, limit = 20 } = req.query;
+      const { page = 1, limit = 10 } = req.query;
       const offset = (Number(page) - 1) * Number(limit);
 
       const { count, rows } = await Download.findAndCountAll({
-        where:  { userId: req.user.id },
+        where: { userId: req.user.id },
         include: [{ model: Book, as: 'Book', attributes: ['id', 'title', 'isbn', 'coverUrl'] }],
-        order:  [['downloadedAt', 'DESC']],
-        limit:  Number(limit),
+        order: [['downloadedAt', 'DESC']],
+        limit: Number(limit),
         offset,
       });
 
@@ -88,9 +88,9 @@ class DownloadController {
       const topBooks = await Download.findAll({
         attributes: ['bookId', [fn('COUNT', col('Download.id')), 'downloadCount']],
         include: [{ model: Book, as: 'Book', attributes: ['id', 'title', 'coverUrl'] }],
-        group:   ['bookId', 'Book.id'],
-        order:   [[literal('downloadCount'), 'DESC']],
-        limit:   10,
+        group: ['bookId', 'Book.id'],
+        order: [[literal('downloadCount'), 'DESC']],
+        limit: 10,
       });
 
       const totalDownloads = await Download.count();

@@ -5,7 +5,7 @@ const { NotFoundError, ConflictError } = require("../utils/errors");
 
 
 class RoleController {
-  // ── GET /api/roles ────
+  // ── GET /api/roles 
   static async getAll(req, res, next) {
     try {
       const roles = await Role.findAll({
@@ -31,7 +31,7 @@ class RoleController {
     }
   }
 
-  // ── POST /api/roles ───
+  // ── POST /api/roles 
   static async create(req, res, next) {
     try {
       const { name, description, } = req.body;
@@ -41,7 +41,7 @@ class RoleController {
 
       const role = await Role.create({ name, description });
 
-      return ResponseFormatter.success(res, role, "Role created", 201);
+      return ResponseFormatter.success(res, role, "Role created successfully", 201);
     } catch (err) {
       next(err);
     }
@@ -62,25 +62,25 @@ class RoleController {
 
       await role.update({ name, description });
 
-      return ResponseFormatter.success(res, role, "Role updated");
+      return ResponseFormatter.success(res, role, "Role updated successfully");
     } catch (err) {
       next(err);
     }
   }
 
-  // ── DELETE /api/roles/:id ────────────────────────────────────────────────────
+  // ── DELETE /api/roles/:id 
   static async delete(req, res, next) {
     try {
       const role = await Role.findByPk(req.params.id);
       if (!role) throw new NotFoundError("Role not found");
       await role.destroy();
-      return ResponseFormatter.noContent(res, null, "Role deleted");
+      return ResponseFormatter.noContent(res, null, "Role deleted successfully");
     } catch (err) {
       next(err);
     }
   }
 
-  // ── POST /api/roles/:id/permissions ─────────────────────────────────────────
+  // ── POST /api/roles/:id/permissions 
   static async assignRolePermissions(req, res, next) {
     try {
       const role = await Role.findByPk(req.params.id);
@@ -89,7 +89,7 @@ class RoleController {
       const perms = await Permission.findAll({ where: { id: req.body.permissionIds } });
       await role.setPermissions(perms);
 
-      return ResponseFormatter.success(res, null, "Role assigned to permissions");
+      return ResponseFormatter.success(res, null, "Role assigned to permissions successfully");
     } catch (err) {
       next(err);
     }

@@ -103,7 +103,7 @@ class UploadController {
         );
       }
 
-      return ResponseFormatter.success(res, null, "File deleted successfully");
+      return ResponseFormatter.noContent(res, null, "File deleted successfully");
     } catch (error) {
       next(error);
     }

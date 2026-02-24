@@ -1,14 +1,14 @@
 // controllers/book.controller.js
-const { Op }      = require('sequelize');
+const { Op } = require('sequelize');
 const { Book, Author, Category, Publisher, MaterialType, Department, Download } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
-const { ValidationError, NotFoundError } = require('../utils/errors');
+const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 
 // ── Shared include for full book detail ───────────────────────────────────────
 const BOOK_INCLUDE = [
-  { model: Category,     as: 'Category',     attributes: ['id', 'name', 'nameKh'] },
-  { model: Publisher,    as: 'Publisher',    attributes: ['id', 'name', 'nameKh'] },
-  { model: Department,   as: 'Department',   attributes: ['id', 'name', 'code'] },
+  { model: Category, as: 'Category', attributes: ['id', 'name', 'nameKh'] },
+  { model: Publisher, as: 'Publisher', attributes: ['id', 'name', 'nameKh'] },
+  { model: Department, as: 'Department', attributes: ['id', 'name', 'code'] },
   { model: MaterialType, as: 'MaterialType', attributes: ['id', 'name', 'nameKh'] },
   {
     model: Author, as: 'Authors',
@@ -19,59 +19,59 @@ const BOOK_INCLUDE = [
 
 class BookController {
 
-  // ── GET /api/books ───────────────────────────────────────────────────────────
+  // ── GET /api/books 
   static async getAll(req, res, next) {
     try {
       const {
-        page = 1, limit = 20,
+        page = 1, limit = 10,
         search = '',
         categoryId, publisherId, departmentId, typeId,
         publicationYear, isActive,
-        sortBy = 'createdAt', sortOrder = 'DESC',
+        sortBy = 'created_at', sortOrder = 'DESC',
       } = req.query;
 
       const where = { isDeleted: false };
 
       if (search) {
         where[Op.or] = [
-          { title:    { [Op.iLike]: `%${search}%` } },
-          { titleKh:  { [Op.iLike]: `%${search}%` } },
-          { isbn:     { [Op.iLike]: `%${search}%` } },
+          { title: { [Op.iLike]: `%${search}%` } },
+          { titleKh: { [Op.iLike]: `%${search}%` } },
+          { isbn: { [Op.iLike]: `%${search}%` } },
           { description: { [Op.iLike]: `%${search}%` } },
         ];
       }
-      if (categoryId)     where.categoryId     = categoryId;
-      if (publisherId)    where.publisherId     = publisherId;
-      if (departmentId)   where.departmentId    = departmentId;
-      if (typeId)         where.typeId          = typeId;
-      if (publicationYear)where.publicationYear = publicationYear;
+      if (categoryId) where.categoryId = categoryId;
+      if (publisherId) where.publisherId = publisherId;
+      if (departmentId) where.departmentId = departmentId;
+      if (typeId) where.typeId = typeId;
+      if (publicationYear) where.publicationYear = publicationYear;
       if (isActive !== undefined) where.isActive = isActive === 'true';
 
-      const offset  = (Number(page) - 1) * Number(limit);
+      const offset = (Number(page) - 1) * Number(limit);
       const { count, rows } = await Book.findAndCountAll({
         where,
         include: BOOK_INCLUDE,
-        order:   [[sortBy, sortOrder.toUpperCase()]],
-        limit:   Number(limit),
+        order: [[sortBy, sortOrder.toUpperCase()]],
+        limit: Number(limit),
         offset,
         distinct: true,
       });
 
       return ResponseFormatter.success(res, {
-        books:      rows,
-        total:      count,
-        page:       Number(page),
-        limit:      Number(limit),
+        books: rows,
+        total: count,
+        page: Number(page),
+        limit: Number(limit),
         totalPages: Math.ceil(count / Number(limit)),
       });
     } catch (err) { next(err); }
   }
 
-  // ── GET /api/books/:id ───────────────────────────────────────────────────────
+  // ── GET /api/books/:id 
   static async getById(req, res, next) {
     try {
       const book = await Book.findOne({
-        where:   { id: req.params.id, isDeleted: false },
+        where: { id: req.params.id, isDeleted: false },
         include: BOOK_INCLUDE,
       });
       if (!book) throw new NotFoundError('Book not found');
@@ -83,7 +83,7 @@ class BookController {
     } catch (err) { next(err); }
   }
 
-  // ── POST /api/books ──────────────────────────────────────────────────────────
+  // ── POST /api/books 
   static async create(req, res, next) {
     try {
       const {
@@ -99,7 +99,7 @@ class BookController {
       // Check ISBN uniqueness
       if (isbn) {
         const exists = await Book.findOne({ where: { isbn } });
-      if (exists) throw new ConflictError(`ISBN '${isbn}' already exists`);
+        if (exists) throw new ConflictError(`ISBN '${isbn}' already exists`);
       }
 
       const book = await Book.create({
@@ -113,7 +113,7 @@ class BookController {
         const pairs = authorIds.map((a) =>
           typeof a === 'object'
             ? { author_id: a.id, is_primary_author: a.isPrimaryAuthor ?? false }
-            : { author_id: a,    is_primary_author: false }
+            : { author_id: a, is_primary_author: false }
         );
         await Promise.all(pairs.map((p) =>
           book.addAuthor(p.author_id, { through: { isPrimaryAuthor: p.is_primary_author } })
@@ -121,7 +121,7 @@ class BookController {
       }
 
       const created = await Book.findOne({
-        where:   { id: book.id },
+        where: { id: book.id },
         include: BOOK_INCLUDE,
       });
 
@@ -129,7 +129,7 @@ class BookController {
     } catch (err) { next(err); }
   }
 
-  // ── PUT /api/books/:id ───────────────────────────────────────────────────────
+  // ── PUT /api/books/:id 
   static async update(req, res, next) {
     try {
       const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
@@ -145,23 +145,23 @@ class BookController {
       // Check ISBN uniqueness (exclude self)
       if (isbn && isbn !== book.isbn) {
         const exists = await Book.findOne({ where: { isbn, id: { [Op.ne]: book.id } } });
-      if (exists) throw new ConflictError(`ISBN '${isbn}' already exists`);
+        if (exists) throw new ConflictError(`ISBN '${isbn}' already exists`);
       }
 
       await book.update({
-        ...(title            !== undefined && { title }),
-        ...(titleKh          !== undefined && { titleKh }),
-        ...(isbn             !== undefined && { isbn }),
-        ...(publicationYear  !== undefined && { publicationYear }),
-        ...(description      !== undefined && { description }),
-        ...(coverUrl         !== undefined && { coverUrl }),
-        ...(pdfUrl           !== undefined && { pdfUrl }),
-        ...(pages            !== undefined && { pages }),
-        ...(categoryId       !== undefined && { categoryId }),
-        ...(publisherId      !== undefined && { publisherId }),
-        ...(departmentId     !== undefined && { departmentId }),
-        ...(typeId           !== undefined && { typeId }),
-        ...(isActive         !== undefined && { isActive }),
+        ...(title !== undefined && { title }),
+        ...(titleKh !== undefined && { titleKh }),
+        ...(isbn !== undefined && { isbn }),
+        ...(publicationYear !== undefined && { publicationYear }),
+        ...(description !== undefined && { description }),
+        ...(coverUrl !== undefined && { coverUrl }),
+        ...(pdfUrl !== undefined && { pdfUrl }),
+        ...(pages !== undefined && { pages }),
+        ...(categoryId !== undefined && { categoryId }),
+        ...(publisherId !== undefined && { publisherId }),
+        ...(departmentId !== undefined && { departmentId }),
+        ...(typeId !== undefined && { typeId }),
+        ...(isActive !== undefined && { isActive }),
       });
 
       // Replace authors if provided
@@ -181,7 +181,7 @@ class BookController {
     } catch (err) { next(err); }
   }
 
-  // ── DELETE /api/books/:id (soft delete) ──────────────────────────────────────
+  // ── DELETE /api/books/:id (soft delete) 
   static async delete(req, res, next) {
     try {
       const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
@@ -191,7 +191,7 @@ class BookController {
     } catch (err) { next(err); }
   }
 
-  // ── GET /api/books/:id/downloads ─────────────────────────────────────────────
+  // ── GET /api/books/:id/downloads 
   static async getDownloads(req, res, next) {
     try {
       const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
@@ -201,10 +201,10 @@ class BookController {
       const offset = (Number(page) - 1) * Number(limit);
 
       const { count, rows } = await Download.findAndCountAll({
-        where:   { bookId: book.id },
+        where: { bookId: book.id },
         include: [{ model: require('../models').User, as: 'User', attributes: ['id', 'username', 'email'] }],
-        order:   [['downloadedAt', 'DESC']],
-        limit:   Number(limit),
+        order: [['downloadedAt', 'DESC']],
+        limit: Number(limit),
         offset,
       });
 

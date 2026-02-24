@@ -3,17 +3,6 @@
 // ============================================
 
 module.exports = {
-  // USER_ROLES: {
-  //   ADMIN: "admin",
-  //   LIBRARIAN: "librarian",
-  //   STUDENT: "student",
-  // },
-
-  // RESOURCE_TYPES: {
-  //   THESIS: "thesis",
-  //   PUBLICATION: "publication",
-  //   JOURNAL: "journal",
-  // },
 
   FILE_TYPES: {
     PDF: "application/pdf",

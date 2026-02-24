@@ -4,7 +4,7 @@ const ResponseFormatter = require("../utils/responseFormatter");
 const { NotFoundError, ConflictError } = require("../utils/errors");
 
 class PermissionController {
-  // ── GET /api/permissions ─────────────────────────────────────────────────────
+  // ── GET /api/permissions 
   static async getAll(req, res, next) {
     try {
       const permissions = await Permission.findAll({
@@ -17,7 +17,7 @@ class PermissionController {
     }
   }
 
-  // ── GET /api/permissions/:id ─────────────────────────────────────────────────
+  // ── GET /api/permissions/:id 
   static async getById(req, res, next) {
     try {
       const permission = await Permission.findByPk(req.params.id, {
@@ -30,7 +30,7 @@ class PermissionController {
     }
   }
 
-  // ── POST /api/permissions ────────────────────────────────────────────────────
+  // ── POST /api/permissions 
   static async create(req, res, next) {
     try {
       const { name, description } = req.body;
@@ -39,13 +39,13 @@ class PermissionController {
       if (existing) throw new ConflictError(`Permission '${name}' already exists`);
 
       const permission = await Permission.create({ name, description });
-      return ResponseFormatter.success(res, permission, "Permission created", 201);
+      return ResponseFormatter.success(res, permission, "Permission created successfully", 201);
     } catch (err) {
       next(err);
     }
   }
 
-  // ── PUT /api/permissions/:id ─────────────────────────────────────────────────
+  // ── PUT /api/permissions/:id 
   static async update(req, res, next) {
     try {
       const permission = await Permission.findByPk(req.params.id);
@@ -59,20 +59,20 @@ class PermissionController {
       }
 
       await permission.update({ name, description });
-      return ResponseFormatter.success(res, permission, "Permission updated");
+      return ResponseFormatter.success(res, permission, "Permission updated successfully");
     } catch (err) {
       next(err);
     }
   }
 
-  // ── DELETE /api/permissions/:id ──────────────────────────────────────────────
+  // ── DELETE /api/permissions/:id 
   static async delete(req, res, next) {
     try {
       const permission = await Permission.findByPk(req.params.id);
       if (!permission) throw new NotFoundError("Permission not found");
 
       await permission.destroy();
-      return ResponseFormatter.noContent(res, null, "Permission deleted");
+      return ResponseFormatter.noContent(res, null, "Permission deleted successfully");
     } catch (err) {
       next(err);
     }

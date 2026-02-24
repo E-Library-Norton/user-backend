@@ -6,19 +6,19 @@ const { ValidationError, AuthenticationError, NotFoundError } = require("../util
 
 class AuthController {
 
-  // ── Generate Access Token (short-lived: 15m)
+  // ── Generate Access Token (short-lived: 1d)
   static generateAccessToken(user) {
     const roles = (user.Roles || []).map((r) => r.name);
     return jwt.sign(
       {
-        id:       user.id,
+        id: user.id,
         username: user.username,
-        email:    user.email,
+        email: user.email,
         studentId: user.studentId,
         roles,
       },
       process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m" }
+      { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "1d" }
     );
   }
 
@@ -48,9 +48,9 @@ class AuthController {
 
       return ResponseFormatter.success(res, {
         user: {
-          id:        user.id,
-          username:  user.username,
-          email:     user.email,
+          id: user.id,
+          username: user.username,
+          email: user.email,
           studentId: user.studentId,
         },
       }, "Registration successful", 201);
@@ -68,8 +68,8 @@ class AuthController {
       const user = await User.findOne({
         where: {
           [Op.or]: [
-            { username:  identifier },
-            { email:     identifier },
+            { username: identifier },
+            { email: identifier },
             { studentId: identifier },
           ],
         },
@@ -84,16 +84,16 @@ class AuthController {
         throw new AuthenticationError("Account is deactivated");
       }
 
-      const accessToken  = AuthController.generateAccessToken(user);
+      const accessToken = AuthController.generateAccessToken(user);
       const refreshToken = AuthController.generateRefreshToken(user);
 
       return ResponseFormatter.success(res, {
         user: {
-          id:        user.id,
-          username:  user.username,
-          email:     user.email,
+          id: user.id,
+          username: user.username,
+          email: user.email,
           studentId: user.studentId,
-          roles:     user.Roles.map((r) => r.name),
+          roles: user.Roles.map((r) => r.name),
         },
         accessToken,
         refreshToken,
@@ -121,7 +121,7 @@ class AuthController {
 
       // Still check user is active (edge case: account disabled after token issued)
       const user = await User.findByPk(decoded.id);
-      if (!user)          throw new AuthenticationError("User not found");
+      if (!user) throw new AuthenticationError("User not found");
       if (!user.isActive) throw new AuthenticationError("Account is deactivated");
 
       const accessToken = AuthController.generateAccessToken(user);
@@ -153,13 +153,13 @@ class AuthController {
       if (!user) throw new NotFoundError("User not found");
 
       return ResponseFormatter.success(res, {
-        id:        user.id,
-        username:  user.username,
-        email:     user.email,
+        id: user.id,
+        username: user.username,
+        email: user.email,
         studentId: user.studentId,
         firstName: user.firstName,
-        lastName:  user.lastName,
-        roles:     user.Roles.map((r) => r.name),
+        lastName: user.lastName,
+        roles: user.Roles.map((r) => r.name),
         createdAt: user.createdAt,
       });
 
@@ -179,11 +179,11 @@ class AuthController {
       await user.update({ firstName, lastName, studentId });
 
       return ResponseFormatter.success(res, {
-        id:        user.id,
-        email:     user.email,
+        id: user.id,
+        email: user.email,
         studentId: user.studentId,
         firstName: user.firstName,
-        lastName:  user.lastName,
+        lastName: user.lastName,
       }, "Profile updated successfully");
 
     } catch (err) {

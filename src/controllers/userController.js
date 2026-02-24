@@ -9,8 +9,8 @@ class UserController {
   // ── GET /api/users 
   static async getAll(req, res, next) {
     try {
-      const page   = Math.max(parseInt(req.query.page)  || PAGINATION.DEFAULT_PAGE,  1);
-      const limit  = Math.min(parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT);
+      const page = Math.max(parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE, 1);
+      const limit = Math.min(parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT);
       const offset = (page - 1) * limit;
 
       const { count, rows: users } = await User.findAndCountAll({
@@ -34,7 +34,7 @@ class UserController {
     try {
       const user = await User.findByPk(req.params.id, {
         include: [
-          { association: "Roles",       through: { attributes: [] } },
+          { association: "Roles", through: { attributes: [] } },
           { association: "Permissions", through: { attributes: [] } },
         ],
       });
@@ -98,7 +98,7 @@ class UserController {
         include: [{ association: "Roles", through: { attributes: [] } }],
       });
 
-      return ResponseFormatter.success(res, updated, "User updated");
+      return ResponseFormatter.success(res, updated, "User updated successfully");
     } catch (err) {
       next(err);
     }
@@ -117,7 +117,7 @@ class UserController {
       await user.update({ isDeleted: true, isActive: false });
 
       Logger.info(`Soft-deleted user ${user.username} by admin ${req.user.id}`);
-      return ResponseFormatter.success(res, null, "User deleted");
+      return ResponseFormatter.noContent(res, null, "User deleted successfully");
     } catch (err) {
       next(err);
     }
@@ -132,7 +132,7 @@ class UserController {
       const roles = await Role.findAll({ where: { id: req.body.roleIds } });
       await user.setRoles(roles);
 
-      return ResponseFormatter.success(res, null, "Roles assigned");
+      return ResponseFormatter.success(res, null, "Roles assigned successfully");
     } catch (err) {
       next(err);
     }
@@ -147,7 +147,7 @@ class UserController {
       const perms = await Permission.findAll({ where: { id: req.body.permissionIds } });
       await user.setPermissions(perms);
 
-      return ResponseFormatter.success(res, null, "Permissions assigned");
+      return ResponseFormatter.success(res, null, "Permissions assigned successfully");
     } catch (err) {
       next(err);
     }
