@@ -8,7 +8,7 @@ const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
   const allowedTypes = {
     cover: FILE_TYPES.IMAGE,           // array of image mimetypes
-    profiles: [FILE_TYPES.PDF],        // ["application/pdf"]
+    pdf: [FILE_TYPES.PDF],        // ["application/pdf"]
     file: FILE_TYPES.IMAGE,            // for single upload
   };
 
@@ -40,6 +40,6 @@ module.exports = {
 
   uploadMulti: upload.fields([
     { name: 'cover', maxCount: 1 },
-    { name: 'profiles', maxCount: 1 },
+    { name: 'pdf', maxCount: 1 },
   ]),
 };

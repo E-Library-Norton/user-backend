@@ -14,7 +14,7 @@ router.post('/:id/download', authenticate, DownloadController.recordDownload);
 router.get ('/:id/downloads', authenticate, authorize('admin', 'librarian'), BookController.getDownloads);
 
 // Librarian / Admin only
-// uploadMulti accepts: cover (image) and profiles (PDF)
+// uploadMulti accepts: cover (image) and pdf (PDF)
 router.post('/',     authenticate, authorize('admin', 'librarian'), uploadMulti, BookController.create);
 router.put ('/:id',  authenticate, authorize('admin', 'librarian'), uploadMulti, BookController.update);
 router.delete('/:id',authenticate, authorize('admin'),                           BookController.delete);

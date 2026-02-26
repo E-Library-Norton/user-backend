@@ -6,9 +6,7 @@ const { ValidationError, NotFoundError, ConflictError } = require('../utils/erro
 const cloudinary = require('../config/cloudinary');
 const streamifier = require('streamifier');
 
-// Upload a file buffer to Cloudinary and return the result.
-// use_filename: true  → preserves the original filename (e.g. thesis2.pdf) in the URL
-// unique_filename: true → appends a short suffix to avoid name collisions
+
 function uploadToCloudinary(file, folder, resourceType = 'auto') {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -136,8 +134,8 @@ class BookController {
         const result = await uploadToCloudinary(req.files.cover[0], 'books/covers', 'image');
         coverUrl = result.secure_url;
       }
-      if (req.files?.profiles?.[0]) {
-        const result = await uploadToCloudinary(req.files.profiles[0], 'books/pdfs', 'raw');
+      if (req.files?.pdf?.[0]) {
+        const result = await uploadToCloudinary(req.files.pdf[0], 'books/pdfs', 'raw');
         pdfUrl = result.secure_url;
       }
 
@@ -201,8 +199,8 @@ class BookController {
         const result = await uploadToCloudinary(req.files.cover[0], 'books/covers', 'image');
         coverUrl = result.secure_url;
       }
-      if (req.files?.profiles?.[0]) {
-        const result = await uploadToCloudinary(req.files.profiles[0], 'books/pdfs', 'raw');
+      if (req.files?.pdf?.[0]) {
+        const result = await uploadToCloudinary(req.files.pdf[0], 'books/pdfs', 'raw');
         pdfUrl = result.secure_url;
       }
 
