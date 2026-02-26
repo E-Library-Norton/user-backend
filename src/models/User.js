@@ -12,6 +12,11 @@ const User = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    imageUrl: {
+      type: DataTypes.STRING(500),
+      field:"image_url",
+      allowNull: false
+    },
     username: {
       type: DataTypes.STRING(50),
       allowNull: false,

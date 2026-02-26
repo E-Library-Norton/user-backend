@@ -34,14 +34,14 @@ class AuthController {
   // ── POST /api/auth/register
   static async register(req, res, next) {
     try {
-      const { username, email, password, firstName, lastName, studentId } = req.body;
+      const { imageUrl, username, email, password, firstName, lastName, studentId } = req.body;
 
       const existing = await User.findOne({
         where: { [Op.or]: [{ username }, { email }, { studentId }] },
       });
       if (existing) throw new ValidationError("Username, Email or Student ID already registered");
 
-      const user = await User.create({ username, email, password, firstName, lastName, studentId });
+      const user = await User.create({ imageUrl, username, email, password, firstName, lastName, studentId });
 
       const studentRole = await Role.findOne({ where: { name: "student" } });
       if (studentRole) await user.addRole(studentRole);
@@ -154,6 +154,7 @@ class AuthController {
 
       return ResponseFormatter.success(res, {
         id: user.id,
+        imageUrl: user.imageUrl,
         username: user.username,
         email: user.email,
         studentId: user.studentId,
@@ -171,15 +172,16 @@ class AuthController {
   // ── PUT /api/auth/profile
   static async updateProfile(req, res, next) {
     try {
-      const { firstName, lastName, studentId } = req.body;
+      const { imageUrl, firstName, lastName, studentId } = req.body;
 
       const user = await User.findByPk(req.user.id);
       if (!user) throw new NotFoundError("User not found");
 
-      await user.update({ firstName, lastName, studentId });
+      await user.update({ imageUrl, firstName, lastName, studentId });
 
       return ResponseFormatter.success(res, {
         id: user.id,
+        imageUrl:user.imageUrl,
         email: user.email,
         studentId: user.studentId,
         firstName: user.firstName,
