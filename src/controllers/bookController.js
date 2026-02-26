@@ -3,6 +3,26 @@ const { Op } = require('sequelize');
 const { Book, Author, Category, Publisher, MaterialType, Department, Download } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
+const cloudinary = require('../config/cloudinary');
+const streamifier = require('streamifier');
+
+// Upload a file buffer to Cloudinary and return the result.
+// use_filename: true  → preserves the original filename (e.g. thesis2.pdf) in the URL
+// unique_filename: true → appends a short suffix to avoid name collisions
+function uploadToCloudinary(file, folder, resourceType = 'auto') {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type:   resourceType,
+        use_filename:    true,
+        unique_filename: true,
+      },
+      (err, result) => { if (err) reject(err); else resolve(result); }
+    );
+    streamifier.createReadStream(file.buffer).pipe(stream);
+  });
+}
 
 // ── Shared include for full book detail ───────────────────────────────────────
 const BOOK_INCLUDE = [
@@ -83,12 +103,12 @@ class BookController {
     } catch (err) { next(err); }
   }
 
-  // ── POST /api/books 
+  // ── POST /api/books
   static async create(req, res, next) {
     try {
       const {
         title, titleKh, isbn, publicationYear, description,
-        coverUrl, pdfUrl, pages,
+        pages,
         categoryId, publisherId, departmentId, typeId,
         authorIds = [],   // [{ id, isPrimaryAuthor }] or [id, id]
         isActive = true,
@@ -102,6 +122,25 @@ class BookController {
         if (exists) throw new ConflictError(`ISBN '${isbn}' already exists`);
       }
 
+      // authorIds may arrive as a JSON string when sent via FormData
+      let parsedAuthorIds = authorIds;
+      if (typeof authorIds === 'string') {
+        try { parsedAuthorIds = JSON.parse(authorIds); } catch { parsedAuthorIds = []; }
+      }
+
+      // Upload files to Cloudinary if provided
+      let coverUrl = req.body.coverUrl ?? null;
+      let pdfUrl   = req.body.pdfUrl   ?? null;
+
+      if (req.files?.cover?.[0]) {
+        const result = await uploadToCloudinary(req.files.cover[0], 'books/covers', 'image');
+        coverUrl = result.secure_url;
+      }
+      if (req.files?.profiles?.[0]) {
+        const result = await uploadToCloudinary(req.files.profiles[0], 'books/pdfs', 'raw');
+        pdfUrl = result.secure_url;
+      }
+
       const book = await Book.create({
         title, titleKh, isbn, publicationYear, description,
         coverUrl, pdfUrl, pages,
@@ -109,8 +148,8 @@ class BookController {
       });
 
       // Attach authors
-      if (authorIds.length > 0) {
-        const pairs = authorIds.map((a) =>
+      if (parsedAuthorIds.length > 0) {
+        const pairs = parsedAuthorIds.map((a) =>
           typeof a === 'object'
             ? { author_id: a.id, is_primary_author: a.isPrimaryAuthor ?? false }
             : { author_id: a, is_primary_author: false }
@@ -129,7 +168,7 @@ class BookController {
     } catch (err) { next(err); }
   }
 
-  // ── PUT /api/books/:id 
+  // ── PUT /api/books/:id
   static async update(req, res, next) {
     try {
       const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
@@ -137,7 +176,7 @@ class BookController {
 
       const {
         title, titleKh, isbn, publicationYear, description,
-        coverUrl, pdfUrl, pages,
+        pages,
         categoryId, publisherId, departmentId, typeId,
         authorIds, isActive,
       } = req.body;
@@ -146,6 +185,25 @@ class BookController {
       if (isbn && isbn !== book.isbn) {
         const exists = await Book.findOne({ where: { isbn, id: { [Op.ne]: book.id } } });
         if (exists) throw new ConflictError(`ISBN '${isbn}' already exists`);
+      }
+
+      // authorIds may arrive as a JSON string when sent via FormData
+      let parsedAuthorIds = authorIds;
+      if (typeof authorIds === 'string') {
+        try { parsedAuthorIds = JSON.parse(authorIds); } catch { parsedAuthorIds = undefined; }
+      }
+
+      // Upload new files to Cloudinary if provided
+      let coverUrl = req.body.coverUrl;
+      let pdfUrl   = req.body.pdfUrl;
+
+      if (req.files?.cover?.[0]) {
+        const result = await uploadToCloudinary(req.files.cover[0], 'books/covers', 'image');
+        coverUrl = result.secure_url;
+      }
+      if (req.files?.profiles?.[0]) {
+        const result = await uploadToCloudinary(req.files.profiles[0], 'books/pdfs', 'raw');
+        pdfUrl = result.secure_url;
       }
 
       await book.update({
@@ -165,10 +223,10 @@ class BookController {
       });
 
       // Replace authors if provided
-      if (authorIds !== undefined) {
+      if (parsedAuthorIds !== undefined) {
         await book.setAuthors([]); // clear
-        if (authorIds.length > 0) {
-          await Promise.all(authorIds.map((a) => {
+        if (parsedAuthorIds.length > 0) {
+          await Promise.all(parsedAuthorIds.map((a) => {
             const id = typeof a === 'object' ? a.id : a;
             const isPrimary = typeof a === 'object' ? (a.isPrimaryAuthor ?? false) : false;
             return book.addAuthor(id, { through: { isPrimaryAuthor: isPrimary } });

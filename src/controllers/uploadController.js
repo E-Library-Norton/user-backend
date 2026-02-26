@@ -1,11 +1,24 @@
-// ============================================
-// FILE: src/controllers/uploadController.js
-// ============================================
-
 const ResponseFormatter = require("../utils/responseFormatter");
 const Helpers = require("../utils/helpers");
+const cloudinary = require("../config/cloudinary");
+const streamifier = require("streamifier");
+const { MAX_FILE_SIZES } = require("../config/constants");
 
 class UploadController {
+  // Helper to upload to Cloudinary
+  static uploadToCloudinary(file, folder = "uploads") {
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder, resource_type: "auto" },
+        (err, result) => {
+          if (err) reject(err);
+          else resolve(result);
+        }
+      );
+      streamifier.createReadStream(file.buffer).pipe(stream);
+    });
+  }
+
   // Single file upload
   static async uploadSingle(req, res, next) {
     try {
@@ -18,17 +31,24 @@ class UploadController {
         );
       }
 
+      if (req.file.size > MAX_FILE_SIZES.IMAGE) {
+        return ResponseFormatter.error(
+          res,
+          `Image too large. Max size is ${MAX_FILE_SIZES.IMAGE / (1024 * 1024)}MB`,
+          400,
+          "FILE_TOO_LARGE"
+        );
+      }
+
+      const result = await UploadController.uploadToCloudinary(req.file);
+
       const fileInfo = {
-        filename: req.file.filename,
+        url: result.secure_url,
+        public_id: result.public_id,
         originalName: req.file.originalname,
         mimetype: req.file.mimetype,
         size: req.file.size,
         formattedSize: Helpers.formatFileSize(req.file.size),
-        path: `/${req.file.path.replace(/\\/g, "/")}`,
-        url: `${req.protocol}://${req.get("host")}/${req.file.path.replace(
-          /\\/g,
-          "/"
-        )}`,
       };
 
       return ResponseFormatter.success(
@@ -45,7 +65,7 @@ class UploadController {
   // Multiple files upload
   static async uploadMultiple(req, res, next) {
     try {
-      if (!req.files || req.files.length === 0) {
+      if (!req.files || Object.keys(req.files).length === 0) {
         return ResponseFormatter.error(
           res,
           "No files uploaded",
@@ -54,22 +74,24 @@ class UploadController {
         );
       }
 
-      const filesInfo = req.files.map((file) => ({
-        filename: file.filename,
-        originalName: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-        formattedSize: Helpers.formatFileSize(file.size),
-        path: `/${file.path.replace(/\\/g, "/")}`,
-        url: `${req.protocol}://${req.get("host")}/${file.path.replace(
-          /\\/g,
-          "/"
-        )}`,
-      }));
+      const uploadedFiles = {};
+
+      for (const field in req.files) {
+        const file = req.files[field][0];
+        const result = await UploadController.uploadToCloudinary(file, `uploads/${field}`);
+        uploadedFiles[field] = {
+          url: result.secure_url,
+          public_id: result.public_id,
+          originalName: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          formattedSize: Helpers.formatFileSize(file.size),
+        };
+      }
 
       return ResponseFormatter.success(
         res,
-        { files: filesInfo, count: filesInfo.length },
+        { files: uploadedFiles },
         "Files uploaded successfully",
         201
       );
@@ -81,29 +103,24 @@ class UploadController {
   // Delete uploaded file
   static async deleteFile(req, res, next) {
     try {
-      const { filepath } = req.body;
+      const { public_id } = req.body;
 
-      if (!filepath) {
+      if (!public_id) {
         return ResponseFormatter.error(
           res,
-          "File path is required",
+          "public_id is required",
           400,
-          "FILEPATH_REQUIRED"
+          "PUBLIC_ID_REQUIRED"
         );
       }
 
-      const deleted = await Helpers.deleteFile(`.${filepath}`);
+      await cloudinary.uploader.destroy(public_id);
 
-      if (!deleted) {
-        return ResponseFormatter.error(
-          res,
-          "Failed to delete file",
-          500,
-          "DELETE_FAILED"
-        );
-      }
-
-      return ResponseFormatter.noContent(res, null, "File deleted successfully");
+      return ResponseFormatter.noContent(
+        res,
+        null,
+        "File deleted successfully"
+      );
     } catch (error) {
       next(error);
     }

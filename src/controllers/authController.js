@@ -18,7 +18,7 @@ class AuthController {
         roles,
       },
       process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "1d" }
+      { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "30d" }
     );
   }
 
@@ -27,7 +27,7 @@ class AuthController {
     return jwt.sign(
       { id: user.id },
       process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "7d" }
+      { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "60d" }
     );
   }
 
@@ -100,7 +100,7 @@ class AuthController {
       }, "Login successful");
 
     } catch (err) {
-      next(err);
+      console.log("Error ", err)
     }
   }
 

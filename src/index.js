@@ -21,8 +21,8 @@ app.use(cors({
     'http://localhost:3000',
     'http://localhost:3001',
   ],
-  credentials:    true,
-  methods:        ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
@@ -33,19 +33,20 @@ app.use(morgan('dev'));
 app.use('/uploads', express.static('uploads'));
 
 // ── RBAC routes 
-app.use('/api/auth',         require('./routes/auth'));
-app.use('/api/users',        require('./routes/users'));
-app.use('/api/roles',        require('./routes/roles'));
-app.use('/api/permissions',  require('./routes/permissions'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/roles', require('./routes/roles'));
+app.use('/api/permissions', require('./routes/permissions'));
 
 // ── Library routes 
-app.use('/api/books',          require('./routes/books'));
-app.use('/api/authors',        require('./routes/authors'));
-app.use('/api/categories',     require('./routes/categories'));
-app.use('/api/publishers',     require('./routes/publishers'));
+app.use('/api/uploads', require('./routes/uploads'));
+app.use('/api/books', require('./routes/books'));
+app.use('/api/authors', require('./routes/authors'));
+app.use('/api/categories', require('./routes/categories'));
+app.use('/api/publishers', require('./routes/publishers'));
 app.use('/api/material-types', require('./routes/materialTypes'));
-app.use('/api/departments',    require('./routes/departments'));
-app.use('/api/downloads',      require('./routes/downloads'));
+app.use('/api/departments', require('./routes/departments'));
+app.use('/api/downloads', require('./routes/downloads'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

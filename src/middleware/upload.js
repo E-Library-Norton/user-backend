@@ -1,83 +1,45 @@
-// ============================================
-// FILE: src/middleware/upload.js
-// ============================================
-
 const multer = require('multer');
-const path = require('path');
-const Helpers = require('../utils/helpers');
 const { MAX_FILE_SIZES, FILE_TYPES } = require('../config/constants');
 
-// Storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    let folder = 'uploads/';
-    
-    if (file.fieldname === 'cover') {
-      folder += 'covers/';
-    } else if (file.fieldname === 'profiles') {
-      folder += 'profiless/';
-    } else if (file.fieldname === 'audio') {
-      folder += 'audios/';
-    } else if (file.fieldname === 'video') {
-      folder += 'videos/';
-    }
-    
-    cb(null, folder);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Helpers.generateFileName(file.originalname);
-    cb(null, uniqueName);
-  }
-});
+// Use memory storage for Cloudinary
+const storage = multer.memoryStorage();
 
-// File filter
+// File filter — validates MIME type per field name
 const fileFilter = (req, file, cb) => {
   const allowedTypes = {
-    cover: FILE_TYPES.IMAGE,
-    profiles: [FILE_TYPES.PDF],
-    audio: FILE_TYPES.AUDIO,
-    video: FILE_TYPES.VIDEO
+    cover: FILE_TYPES.IMAGE,           // array of image mimetypes
+    profiles: [FILE_TYPES.PDF],        // ["application/pdf"]
+    file: FILE_TYPES.IMAGE,            // for single upload
   };
 
   const allowed = allowedTypes[file.fieldname];
-  
-  if (allowed && (Array.isArray(allowed) ? allowed.includes(file.mimetype) : allowed === file.mimetype)) {
+
+  if (
+    allowed &&
+    (Array.isArray(allowed)
+      ? allowed.includes(file.mimetype)
+      : allowed === file.mimetype)
+  ) {
     cb(null, true);
   } else {
-    cb(new Error(`Invalid file type for ${file.fieldname}`), false);
+    cb(new Error(`Invalid file type for field "${file.fieldname}"`), false);
   }
 };
 
-// Create multer instance
+// Use limits.fileSize (PDF limit is the largest at 10 MB).
+// Per-type image size check (5 MB) is enforced in controllers
+// after the file is fully buffered.
 const upload = multer({
   storage,
   fileFilter,
-  limits: {
-    fileSize: MAX_FILE_SIZES.VIDEO // Maximum size
-  }
+  limits: { fileSize: MAX_FILE_SIZES.PDF },
 });
 
-// Export upload middleware
 module.exports = {
-  uploadThesisFiles: upload.fields([
+  uploadSingle: upload.single('file'),
+
+  uploadMulti: upload.fields([
     { name: 'cover', maxCount: 1 },
-    { name: 'profiles', maxCount: 1 }
+    { name: 'profiles', maxCount: 1 },
   ]),
-  uploadJournalFiles: upload.fields([
-    { name: 'cover', maxCount: 1 },
-    { name: 'profiles', maxCount: 1 }
-  ]),
-  uploadPublicationFiles: upload.fields([
-    { name: 'cover', maxCount: 1 },
-    { name: 'profiles', maxCount: 1 }
-  ]),
-  uploadAudioFiles: upload.fields([
-    { name: 'thumbnail', maxCount: 1 },
-    { name: 'audio', maxCount: 1 }
-  ]),
-  uploadVideoFiles: upload.fields([
-    { name: 'thumbnail', maxCount: 1 },
-    { name: 'video', maxCount: 1 }
-  ]),
-  uploadSingle: upload.single('file')
 };

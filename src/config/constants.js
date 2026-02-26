@@ -10,7 +10,7 @@ module.exports = {
   },
 
   MAX_FILE_SIZES: {
-    PDF: 50 * 1024 * 1024, // 50MB
+    PDF: 10 * 1024 * 1024, // 10MB
     IMAGE: 5 * 1024 * 1024, // 5MB
   },
 

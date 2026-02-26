@@ -1,14 +1,10 @@
-// ============================================
-// FILE: src/routes/upload.js
-// ============================================
-
 const express = require("express");
 const router = express.Router();
 const UploadController = require("../controllers/uploadController");
 const { authenticate, authorize } = require("../middleware/auth");
-const { uploadSingle } = require("../middleware/upload");
+const { uploadSingle, uploadMulti } = require("../middleware/upload");
 
-// Upload endpoints (Admin & Librarian only)
+// Single upload
 router.post(
   "/single",
   authenticate,
@@ -17,6 +13,16 @@ router.post(
   UploadController.uploadSingle
 );
 
+// Multiple upload
+router.post(
+  "/multiple",
+  authenticate,
+  authorize("admin", "librarian"),
+  uploadMulti,
+  UploadController.uploadMultiple
+);
+
+// Delete file
 router.post(
   "/delete",
   authenticate,
