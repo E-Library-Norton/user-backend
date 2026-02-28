@@ -50,7 +50,7 @@ class UserController {
   // ── POST /api/users  (admin creates a user directly) 
   static async create(req, res, next) {
     try {
-      const { imageUrl, username, email, password, firstName, lastName, studentId, roleIds = [] } = req.body;
+      const {  username, email, password, firstName, lastName, studentId, roleIds = [] } = req.body;
 
       const takenUsername = await User.findOne({ where: { username } });
       if (takenUsername) throw new ConflictError("Username already taken");
@@ -61,7 +61,7 @@ class UserController {
       const takenEmail = await User.findOne({ where: { email } });
       if (takenEmail) throw new ConflictError("Email already registered");
 
-      const user = await User.create({imageUrl, username, email, password, firstName, lastName, studentId });
+      const user = await User.create({ username, email, password, firstName, lastName, studentId });
 
       if (roleIds.length > 0) {
         const roles = await Role.findAll({ where: { id: roleIds } });
@@ -86,8 +86,8 @@ class UserController {
       const user = await User.findByPk(req.params.id);
       if (!user) throw new NotFoundError("User not found");
 
-      const { imageUrl,firstName, lastName, studentId, isActive, roleIds } = req.body;
-      await user.update({ imageUrl,firstName, lastName, studentId, isActive });
+      const { avatar,firstName, lastName, studentId, isActive, roleIds } = req.body;
+      await user.update({ avatar,firstName, lastName, studentId, isActive });
 
       if (roleIds !== undefined) {
         const roles = await Role.findAll({ where: { id: roleIds } });
