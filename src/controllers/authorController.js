@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const { Author, Book } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError } = require('../utils/errors');
+const { logActivity } = require('../utils/activityLogger');
 
 class AuthorController {
 
@@ -42,6 +43,17 @@ class AuthorController {
       const { name, nameKh, biography, website } = req.body;
       if (!name) throw new ValidationError('Name is required');
       const author = await Author.create({ name, nameKh, biography, website });
+
+      await logActivity({
+        userId: req.user.id,
+        action: "created",
+        targetType: "author",
+        targetId: author.id,
+        targetName: author.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.success(res, author, 'Author created successfully', 201);
     } catch (err) { next(err); }
   }
@@ -53,6 +65,17 @@ class AuthorController {
       if (!author) throw new NotFoundError('Author not found');
       const { name, nameKh, biography, website } = req.body;
       await author.update({ ...(name !== undefined && { name }), ...(nameKh !== undefined && { nameKh }), ...(biography !== undefined && { biography }), ...(website !== undefined && { website }) });
+
+      await logActivity({
+        userId: req.user.id,
+        action: "updated",
+        targetType: "author",
+        targetId: author.id,
+        targetName: author.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.success(res, author, 'Author updated successfully');
     } catch (err) { next(err); }
   }
@@ -63,6 +86,17 @@ class AuthorController {
       const author = await Author.findByPk(req.params.id);
       if (!author) throw new NotFoundError('Author not found');
       await author.destroy();
+
+      await logActivity({
+        userId: req.user.id,
+        action: "deleted",
+        targetType: "author",
+        targetId: author.id,
+        targetName: author.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.noContent(res, null, 'Author deleted successfully');
     } catch (err) { next(err); }
   }

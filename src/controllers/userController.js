@@ -4,6 +4,7 @@ const ResponseFormatter = require("../utils/responseFormatter");
 const Logger = require("../utils/logger");
 const { PAGINATION } = require("../config/constants");
 const { ValidationError, NotFoundError, ConflictError } = require("../utils/errors");
+const { logActivity } = require("../utils/activityLogger");
 
 class UserController {
   // ── GET /api/users 
@@ -50,7 +51,7 @@ class UserController {
   // ── POST /api/users  (admin creates a user directly) 
   static async create(req, res, next) {
     try {
-      const {  username, email, password, firstName, lastName, studentId, roleIds = [] } = req.body;
+      const { username, email, password, firstName, lastName, studentId, roleIds = [] } = req.body;
 
       const takenUsername = await User.findOne({ where: { username } });
       if (takenUsername) throw new ConflictError("Username already taken");
@@ -70,6 +71,16 @@ class UserController {
 
       Logger.info(`Admin created user: ${username}`);
 
+      await logActivity({
+        userId: req.user.id,
+        action: "created",
+        targetType: "user",
+        targetId: user.id,
+        targetName: `${firstName || ''} ${lastName || ''}`.trim() || username,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       const created = await User.findByPk(user.id, {
         include: [{ association: "Roles", through: { attributes: [] } }],
       });
@@ -86,13 +97,23 @@ class UserController {
       const user = await User.findByPk(req.params.id);
       if (!user) throw new NotFoundError("User not found");
 
-      const { avatar,firstName, lastName, studentId, isActive, roleIds } = req.body;
-      await user.update({ avatar,firstName, lastName, studentId, isActive });
+      const { avatar, firstName, lastName, studentId, faculty, study_year, isActive, roleIds } = req.body;
+      await user.update({ avatar, firstName, lastName, studentId, faculty, study_year, isActive });
 
       if (roleIds !== undefined) {
         const roles = await Role.findAll({ where: { id: roleIds } });
         await user.setRoles(roles);
       }
+
+      await logActivity({
+        userId: req.user.id,
+        action: "updated",
+        targetType: "user",
+        targetId: user.id,
+        targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
 
       const updated = await User.findByPk(user.id, {
         include: [{ association: "Roles", through: { attributes: [] } }],
@@ -115,6 +136,16 @@ class UserController {
       if (!user) throw new NotFoundError("User not found");
 
       await user.update({ isDeleted: true, isActive: false });
+
+      await logActivity({
+        userId: req.user.id,
+        action: "deleted",
+        targetType: "user",
+        targetId: user.id,
+        targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
 
       Logger.info(`Soft-deleted user ${user.username} by admin ${req.user.id}`);
       return ResponseFormatter.noContent(res, null, "User deleted successfully");

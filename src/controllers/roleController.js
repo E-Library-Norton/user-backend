@@ -2,6 +2,7 @@
 const { Role, Permission } = require("../models");
 const ResponseFormatter = require("../utils/responseFormatter");
 const { NotFoundError, ConflictError } = require("../utils/errors");
+const { logActivity } = require("../utils/activityLogger");
 
 
 class RoleController {
@@ -41,6 +42,16 @@ class RoleController {
 
       const role = await Role.create({ name, description });
 
+      await logActivity({
+        userId: req.user.id,
+        action: "created",
+        targetType: "role",
+        targetId: role.id,
+        targetName: role.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.success(res, role, "Role created successfully", 201);
     } catch (err) {
       next(err);
@@ -62,6 +73,16 @@ class RoleController {
 
       await role.update({ name, description });
 
+      await logActivity({
+        userId: req.user.id,
+        action: "updated",
+        targetType: "role",
+        targetId: role.id,
+        targetName: role.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.success(res, role, "Role updated successfully");
     } catch (err) {
       next(err);
@@ -71,9 +92,21 @@ class RoleController {
   // ── DELETE /api/roles/:id 
   static async delete(req, res, next) {
     try {
+      console.log(`Attempting to delete role with ID: ${req.params.id}`);
       const role = await Role.findByPk(req.params.id);
       if (!role) throw new NotFoundError("Role not found");
       await role.destroy();
+
+      await logActivity({
+        userId: req.user.id,
+        action: "deleted",
+        targetType: "role",
+        targetId: role.id,
+        targetName: role.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.noContent(res, null, "Role deleted successfully");
     } catch (err) {
       next(err);

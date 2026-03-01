@@ -19,6 +19,9 @@ const publisherRoutes = require('./publishers');
 const materialTypeRoutes = require('./materialTypes');
 const departmentRoutes = require('./departments');
 const downloadRoutes = require('./downloads');
+const statsRoutes = require('./stats');
+const settingsRoutes = require('./settings');
+const activityLogRoutes = require('./activities');
 // ── Mount 
 
 // Auth
@@ -39,6 +42,9 @@ router.use('/publishers', publisherRoutes);
 router.use('/material-types', materialTypeRoutes);
 router.use('/departments', departmentRoutes);
 router.use('/downloads', downloadRoutes);
+router.use('/stats', statsRoutes);
+router.use('/settings', settingsRoutes);
+router.use('/activities', activityLogRoutes);
 
 // ── API info ──────────────────────────────────────────────────────────────────
 router.get('/', (req, res) => {
@@ -61,6 +67,7 @@ router.get('/', (req, res) => {
       materialTypes: '/api/material-types',
       departments: '/api/departments',
       downloads: '/api/downloads',
+      activities: '/api/activities',
     },
   });
 });

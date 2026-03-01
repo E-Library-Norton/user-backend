@@ -48,9 +48,15 @@ const authenticate = async (req, res, next) => {
 const authorize = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) return ResponseFormatter.unauthorized(res, 'Authentication required');
-    const userRoles = (req.user.Roles || []).map((r) => r.name);
-    const hasRole = allowedRoles.some((role) => userRoles.includes(role));
-    if (!hasRole) return ResponseFormatter.forbidden(res, 'You do not have permission');
+    // Normalize all role names to lowercase and trim for comparison
+    const userRoles = (req.user.Roles || []).map((r) => r.name.toLowerCase().trim());
+    const normalizedAllowed = allowedRoles.map(r => r.toLowerCase().trim());
+
+    const hasRole = normalizedAllowed.some((role) => userRoles.includes(role));
+
+    if (!hasRole) {
+      return ResponseFormatter.forbidden(res, 'You do not have permission');
+    }
     next();
   };
 };

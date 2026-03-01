@@ -5,6 +5,7 @@
 const Category = require("../models/Category");
 const { ConflictError } = require("../utils/errors");
 const ResponseFormatter = require("../utils/responseFormatter");
+const { logActivity } = require("../utils/activityLogger");
 
 class CategoryController {
   static async getAll(req, res, next) {
@@ -37,6 +38,17 @@ class CategoryController {
       const existing = await Category.findOne({ where: { name } });
       if (existing) throw new ConflictError(`Category '${name}' already exists`);
       const category = await Category.create(req.body);
+
+      await logActivity({
+        userId: req.user.id,
+        action: "created",
+        targetType: "category",
+        targetId: category.id,
+        targetName: category.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.success(
         res,
         category,
@@ -56,6 +68,17 @@ class CategoryController {
       }
 
       await category.update(req.body);
+
+      await logActivity({
+        userId: req.user.id,
+        action: "updated",
+        targetType: "category",
+        targetId: category.id,
+        targetName: category.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.success(
         res,
         category,
@@ -75,6 +98,17 @@ class CategoryController {
       }
 
       await category.destroy();
+
+      await logActivity({
+        userId: req.user.id,
+        action: "deleted",
+        targetType: "category",
+        targetId: category.id,
+        targetName: category.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.noContent(res, "Category deleted successfully");
     } catch (error) {
       next(error);

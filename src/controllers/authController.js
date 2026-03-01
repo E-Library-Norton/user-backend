@@ -3,6 +3,7 @@ const { Op } = require("sequelize");
 const { User, Role } = require("../models");
 const ResponseFormatter = require("../utils/responseFormatter");
 const { ValidationError, AuthenticationError, NotFoundError } = require("../utils/errors");
+const { logActivity } = require("../utils/activityLogger");
 
 class AuthController {
 
@@ -87,6 +88,15 @@ class AuthController {
       const accessToken = AuthController.generateAccessToken(user);
       const refreshToken = AuthController.generateRefreshToken(user);
 
+      // Log activity
+      logActivity({
+        userId: user.id,
+        action: 'login',
+        targetId: user.id,
+        targetName: user.username,
+        targetType: 'user'
+      });
+
       return ResponseFormatter.success(res, {
         user: {
           id: user.id,
@@ -100,7 +110,8 @@ class AuthController {
       }, "Login successful");
 
     } catch (err) {
-      console.log("Error ", err)
+      console.log("Error ", err);
+      next(err);
     }
   }
 
@@ -181,7 +192,7 @@ class AuthController {
 
       return ResponseFormatter.success(res, {
         id: user.id,
-        avatar:user.avatar,
+        avatar: user.avatar,
         email: user.email,
         studentId: user.studentId,
         firstName: user.firstName,

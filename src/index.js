@@ -34,21 +34,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 app.use('/uploads', express.static('uploads'));
 
-// ── RBAC routes 
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/roles', require('./routes/roles'));
-app.use('/api/permissions', require('./routes/permissions'));
-
-// ── Library routes 
-app.use('/api/uploads', require('./routes/uploads'));
-app.use('/api/books', require('./routes/books'));
-app.use('/api/authors', require('./routes/authors'));
-app.use('/api/categories', require('./routes/categories'));
-app.use('/api/publishers', require('./routes/publishers'));
-app.use('/api/material-types', require('./routes/materialTypes'));
-app.use('/api/departments', require('./routes/departments'));
-app.use('/api/downloads', require('./routes/downloads'));
+// ── Central API Router
+app.use('/api', require('./routes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -63,6 +50,26 @@ app.use((err, req, res, next) => {
   });
 });
 
+// 404 Handler for all other routes - Must be the LAST middleware
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      code: "NOT_FOUND",
+      message: `Route ${req.originalUrl} not found`
+    }
+  });
+});
+
+const http = require("http");
+const { initSocket } = require("./socket");
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.io
+initSocket(server);
+
 // Start server
 const PORT = process.env.PORT || 5005;
 
@@ -70,7 +77,11 @@ sequelize
   .authenticate()
   .then(() => {
     console.log("Database connected successfully!");
-    app.listen(PORT, () => {
+    return sequelize.sync({ alter: true });
+  })
+  .then(() => {
+    console.log("Database synced successfully!");
+    server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   })
