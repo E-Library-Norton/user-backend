@@ -61,7 +61,7 @@ class StatsController {
                     const yearCount = await Book.count({
                         where: {
                             isDeleted: false,
-                            createdAt: {
+                            created_at: {
                                 [Op.between]: [new Date(`${year}-01-01`), new Date(`${year}-12-31`)]
                             }
                         }
@@ -276,9 +276,9 @@ class StatsController {
             const { limit = 10 } = req.query;
             const recentBooks = await Book.findAll({
                 where: { isDeleted: false },
-                order: [["createdAt", "DESC"]],
+                order: [["created_at", "DESC"]],
                 limit: parseInt(limit),
-                attributes: ["id", "title", "isbn", "coverUrl", "createdAt"],
+                attributes: ["id", "title", "isbn", "coverUrl", "created_at"],
             });
             return ResponseFormatter.success(res, { recentBooks });
         } catch (error) {

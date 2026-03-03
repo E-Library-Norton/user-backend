@@ -77,7 +77,9 @@ sequelize
   .authenticate()
   .then(() => {
     console.log("Database connected successfully!");
-    return sequelize.sync({ alter: true });
+    // Only use alter: true in development environment and if explicitly needed
+    // For now, let's sync without alter to ensure fast startup
+    return sequelize.sync();
   })
   .then(() => {
     console.log("Database synced successfully!");
@@ -87,4 +89,6 @@ sequelize
   })
   .catch((err) => {
     console.error("Database connection failed:", err);
+    // Even if DB fails, we should ideally let the server start or retry
+    // But for now, we'll log it clearly
   });
