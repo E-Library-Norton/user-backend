@@ -19,6 +19,9 @@ const publisherRoutes = require('./publishers');
 const materialTypeRoutes = require('./materialTypes');
 const departmentRoutes = require('./departments');
 const downloadRoutes = require('./downloads');
+// ── AI routes
+const aiRecommendationRoutes = require('./aiRecommendations');
+
 // ── Mount 
 
 // Auth
@@ -39,6 +42,8 @@ router.use('/publishers', publisherRoutes);
 router.use('/material-types', materialTypeRoutes);
 router.use('/departments', departmentRoutes);
 router.use('/downloads', downloadRoutes);
+// AI
+router.use('/ai/recommendations', aiRecommendationRoutes);
 
 // ── API info ──────────────────────────────────────────────────────────────────
 router.get('/', (req, res) => {
@@ -61,6 +66,8 @@ router.get('/', (req, res) => {
       materialTypes: '/api/material-types',
       departments: '/api/departments',
       downloads: '/api/downloads',
+      // AI
+      aiRecommendations: '/api/ai/recommendations',
     },
   });
 });

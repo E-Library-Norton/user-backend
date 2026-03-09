@@ -49,6 +49,8 @@ app.use('/api/publishers', require('./routes/publishers'));
 app.use('/api/material-types', require('./routes/materialTypes'));
 app.use('/api/departments', require('./routes/departments'));
 app.use('/api/downloads', require('./routes/downloads'));
+app.use('/api/ai/recommendations', require('./routes/aiRecommendations'));
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -68,12 +70,15 @@ const PORT = process.env.PORT || 5005;
 
 sequelize
   .authenticate()
-  .then(() => {
-    console.log("Database connected successfully!");
+  .then(async () => {
+    console.log('Database connected successfully!');
+    // Auto-create / update tables (safe: only adds missing columns or tables)
+    await sequelize.sync({ alter: true });
+    console.log('Database synced — otp_tokens and other tables ready.');
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   })
   .catch((err) => {
-    console.error("Database connection failed:", err);
+    console.error('Database connection failed:', err);
   });

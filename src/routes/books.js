@@ -1,22 +1,26 @@
 // routes/books.js
-const router         = require('express').Router();
-const BookController = require('../controllers/bookController');
+const router             = require('express').Router();
+const BookController     = require('../controllers/bookController');
 const DownloadController = require('../controllers/downloadController');
-const { authenticate, authorize } = require('../middleware/auth');
-const { uploadMulti } = require('../middleware/upload');
+const { authenticate, authorize, authenticateStream } = require('../middleware/auth');
+const { uploadMulti }    = require('../middleware/upload');
 
 // Public — anyone can browse
-router.get ('/',           BookController.getAll);
-router.get ('/:id',        BookController.getById);
+router.get ('/',    BookController.getAll);
+router.get ('/:id', BookController.getById);
 
-// Download (must be logged in)
-router.post('/:id/download', authenticate, DownloadController.recordDownload);
-router.get ('/:id/downloads', authenticate, authorize('admin', 'librarian'), BookController.getDownloads);
+// PDF streaming (token accepted via header OR ?token= query param)
+// GET  /:id/stream   → inline preview (use in <iframe> or PDF viewer)
+// GET  /:id/download → records download + streams as "Save As" attachment
+router.get('/:id/stream',   authenticateStream, DownloadController.streamPdf);
+router.get('/:id/download', authenticateStream, DownloadController.recordDownload);
 
-// Librarian / Admin only
-// uploadMulti accepts: cover (image) and pdf (PDF)
-router.post('/',     authenticate, authorize('admin', 'librarian'), uploadMulti, BookController.create);
-router.put ('/:id',  authenticate, authorize('admin', 'librarian'), uploadMulti, BookController.update);
-router.delete('/:id',authenticate, authorize('admin'),                           BookController.delete);
+// Admin stats for a book
+router.get('/:id/downloads', authenticate, authorize('admin', 'librarian'), BookController.getDownloads);
+
+// Librarian / Admin only — create / update / delete
+router.post  ('/',     authenticate, authorize('admin', 'librarian'), uploadMulti, BookController.create);
+router.put   ('/:id',  authenticate, authorize('admin', 'librarian'), uploadMulti, BookController.update);
+router.delete('/:id',  authenticate, authorize('admin'),                           BookController.delete);
 
 module.exports = router;

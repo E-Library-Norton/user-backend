@@ -29,7 +29,7 @@ const authenticate = async (req, res, next) => {
         { association: 'Permissions', through: { attributes: [] } },
       ],
       // ✅ Only select columns you actually need
-      attributes: ['id', 'username', 'email', 'studentId', 'firstName', 'lastName', 'isActive'],
+      attributes: ['id', 'avatar', 'username', 'email', 'studentId', 'firstName', 'lastName', 'isActive'],
     });
 
     if (!user?.isActive) {
@@ -81,4 +81,41 @@ const optionalAuth = async (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, authorize, requirePermission, optionalAuth };
+// ── authenticateStream ────────────────────────────────────────────────────────
+// Same as authenticate but also accepts token from ?token= query param.
+// Use this for stream/download endpoints that must be openable directly in a
+// browser (iframe, <a href>, PDF viewer) where custom headers cannot be sent.
+const authenticateStream = async (req, res, next) => {
+  try {
+    // Accept token from header OR query param
+    const token =
+      req.query.token ||
+      req.header('Authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return ResponseFormatter.unauthorized(res, 'Authentication required');
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    } catch {
+      return ResponseFormatter.unauthorized(res, 'Invalid or expired token');
+    }
+
+    const user = await User.findByPk(decoded.id, {
+      attributes: ['id', 'username', 'email', 'studentId', 'isActive'],
+    });
+
+    if (!user?.isActive) {
+      return ResponseFormatter.unauthorized(res, 'Invalid authentication');
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    return ResponseFormatter.unauthorized(res, 'Invalid or expired token');
+  }
+};
+
+module.exports = { authenticate, authorize, requirePermission, optionalAuth, authenticateStream };

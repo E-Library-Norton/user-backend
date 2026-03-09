@@ -7,9 +7,9 @@ const storage = multer.memoryStorage();
 // File filter — validates MIME type per field name
 const fileFilter = (req, file, cb) => {
   const allowedTypes = {
-    cover: FILE_TYPES.IMAGE,           // array of image mimetypes
-    pdf: [FILE_TYPES.PDF],        // ["application/pdf"]
-    file: FILE_TYPES.IMAGE,            // for single upload
+    cover: FILE_TYPES.IMAGE,                          // array of image mimetypes
+    pdf:   [FILE_TYPES.PDF],                          // ["application/pdf"]
+    file:  [...FILE_TYPES.IMAGE, FILE_TYPES.PDF],     // single upload: image OR pdf
   };
 
   const allowed = allowedTypes[file.fieldname];
