@@ -4,8 +4,12 @@ const { Op }     = require("sequelize");
 const { User, Role } = require("../models");
 const ResponseFormatter = require("../utils/responseFormatter");
 const { ValidationError, AuthenticationError, NotFoundError } = require("../utils/errors");
+<<<<<<< HEAD
 const cloudinary   = require("../config/cloudinary");
 const streamifier  = require("streamifier");
+=======
+const { logActivity } = require("../utils/activityLogger");
+>>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
 
 class AuthController {
 
@@ -90,6 +94,15 @@ class AuthController {
       const accessToken = AuthController.generateAccessToken(user);
       const refreshToken = AuthController.generateRefreshToken(user);
 
+      // Log activity
+      logActivity({
+        userId: user.id,
+        action: 'login',
+        targetId: user.id,
+        targetName: user.username,
+        targetType: 'user'
+      });
+
       return ResponseFormatter.success(res, {
         user: {
           id: user.id,
@@ -106,6 +119,10 @@ class AuthController {
       }, "Login successful");
 
     } catch (err) {
+<<<<<<< HEAD
+=======
+      console.log("Error ", err);
+>>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
       next(err);
     }
   }
@@ -187,7 +204,7 @@ class AuthController {
 
       return ResponseFormatter.success(res, {
         id: user.id,
-        avatar:user.avatar,
+        avatar: user.avatar,
         email: user.email,
         studentId: user.studentId,
         firstName: user.firstName,

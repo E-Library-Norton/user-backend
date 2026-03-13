@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const { Publisher } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError } = require('../utils/errors');
+const { logActivity } = require('../utils/activityLogger');
 
 class PublisherController {
 
@@ -30,6 +31,17 @@ class PublisherController {
       const { name, nameKh, address, contactEmail } = req.body;
       if (!name) throw new ValidationError('Name is required');
       const publisher = await Publisher.create({ name, nameKh, address, contactEmail });
+
+      await logActivity({
+        userId: req.user.id,
+        action: "created",
+        targetType: "publisher",
+        targetId: publisher.id,
+        targetName: publisher.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.success(res, publisher, 'Publisher created successfully', 201);
     } catch (err) { next(err); }
   }
@@ -45,6 +57,17 @@ class PublisherController {
         ...(address !== undefined && { address }),
         ...(contactEmail !== undefined && { contactEmail }),
       });
+
+      await logActivity({
+        userId: req.user.id,
+        action: "updated",
+        targetType: "publisher",
+        targetId: publisher.id,
+        targetName: publisher.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.success(res, publisher, 'Publisher updated successfully');
     } catch (err) { next(err); }
   }
@@ -54,6 +77,17 @@ class PublisherController {
       const publisher = await Publisher.findByPk(req.params.id);
       if (!publisher) throw new NotFoundError('Publisher not found');
       await publisher.destroy();
+
+      await logActivity({
+        userId: req.user.id,
+        action: "deleted",
+        targetType: "publisher",
+        targetId: publisher.id,
+        targetName: publisher.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.noContent(res, null, 'Publisher deleted successfully');
     } catch (err) { next(err); }
   }

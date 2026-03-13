@@ -10,7 +10,7 @@ const { authenticate, authorize } = require("../middleware/auth");
 router.get(
   "/overview",
   authenticate,
-  authorize("admin", "librarian"),
+  authorize("admin", "librarian", "administrator", "super admin", "testing"),
   StatsController.getOverview
 );
 

@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const { Department } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
+const { logActivity } = require('../utils/activityLogger');
 
 class DepartmentController {
   static async getAll(req, res, next) {
@@ -33,6 +34,17 @@ class DepartmentController {
         if (exists) throw new ConflictError(`Department ${code} already exists`);
       }
       const dept = await Department.create({ name, nameKh, code });
+
+      await logActivity({
+        userId: req.user.id,
+        action: "created",
+        targetType: "department",
+        targetId: dept.id,
+        targetName: dept.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.success(res, dept, 'Department created successfully', 201);
     } catch (err) { next(err); }
   }
@@ -51,6 +63,17 @@ class DepartmentController {
         ...(nameKh !== undefined && { nameKh }),
         ...(code !== undefined && { code }),
       });
+
+      await logActivity({
+        userId: req.user.id,
+        action: "updated",
+        targetType: "department",
+        targetId: dept.id,
+        targetName: dept.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.success(res, dept, 'Department updated successfully');
     } catch (err) { next(err); }
   }
@@ -60,6 +83,17 @@ class DepartmentController {
       const dept = await Department.findByPk(req.params.id);
       if (!dept) throw new NotFoundError('Department not found');
       await dept.destroy();
+
+      await logActivity({
+        userId: req.user.id,
+        action: "deleted",
+        targetType: "department",
+        targetId: dept.id,
+        targetName: dept.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
       return ResponseFormatter.noContent(res, null, 'Department deleted successfully');
     } catch (err) { next(err); }
   }

@@ -3,7 +3,29 @@ const { Op } = require('sequelize');
 const { Book, Author, Category, Publisher, MaterialType, Department, Download } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
+<<<<<<< HEAD
 const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
+=======
+const { logActivity } = require('../utils/activityLogger');
+const cloudinary = require('../config/cloudinary');
+const streamifier = require('streamifier');
+
+
+function uploadToCloudinary(file, folder, resourceType = 'auto') {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: resourceType,
+        use_filename: true,
+        unique_filename: true,
+      },
+      (err, result) => { if (err) reject(err); else resolve(result); }
+    );
+    streamifier.createReadStream(file.buffer).pipe(stream);
+  });
+}
+>>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
 
 // ── Shared include for full book detail ───────────────────────────────────────
 const BOOK_INCLUDE = [
@@ -111,7 +133,7 @@ class BookController {
 
       // Upload files to Cloudinary if provided
       let coverUrl = req.body.coverUrl ?? null;
-      let pdfUrl   = req.body.pdfUrl   ?? null;
+      let pdfUrl = req.body.pdfUrl ?? null;
 
       if (req.files?.cover?.[0]) {
         const result = await uploadToCloudinary(req.files.cover[0], 'books/covers', 'image');
@@ -145,6 +167,15 @@ class BookController {
         include: BOOK_INCLUDE,
       });
 
+      // Log activity
+      logActivity({
+        userId: req.user?.id,
+        action: 'uploaded',
+        targetId: book.id,
+        targetName: book.title,
+        targetType: 'book'
+      });
+
       return ResponseFormatter.success(res, created, 'Book created successfully', 201);
     } catch (err) { next(err); }
   }
@@ -176,7 +207,7 @@ class BookController {
 
       // Upload new files to Cloudinary if provided
       let coverUrl = req.body.coverUrl;
-      let pdfUrl   = req.body.pdfUrl;
+      let pdfUrl = req.body.pdfUrl;
 
       if (req.files?.cover?.[0]) {
         const result = await uploadToCloudinary(req.files.cover[0], 'books/covers', 'image');
@@ -216,6 +247,15 @@ class BookController {
       }
 
       const updated = await Book.findOne({ where: { id: book.id }, include: BOOK_INCLUDE });
+      // Log activity
+      logActivity({
+        userId: req.user?.id,
+        action: 'updated',
+        targetId: book.id,
+        targetName: book.title,
+        targetType: 'book'
+      });
+
       return ResponseFormatter.success(res, updated, 'Book updated successfully');
     } catch (err) { next(err); }
   }
@@ -226,6 +266,16 @@ class BookController {
       const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
       if (!book) throw new NotFoundError('Book not found');
       await book.update({ isDeleted: true, isActive: false });
+
+      // Log activity
+      logActivity({
+        userId: req.user?.id,
+        action: 'deleted',
+        targetId: book.id,
+        targetName: book.title,
+        targetType: 'book'
+      });
+
       return ResponseFormatter.noContent(res, null, 'Book deleted successfully');
     } catch (err) { next(err); }
   }

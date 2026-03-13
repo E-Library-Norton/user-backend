@@ -19,9 +19,15 @@ const publisherRoutes = require('./publishers');
 const materialTypeRoutes = require('./materialTypes');
 const departmentRoutes = require('./departments');
 const downloadRoutes = require('./downloads');
+<<<<<<< HEAD
 // ── AI routes
 const aiRecommendationRoutes = require('./aiRecommendations');
 
+=======
+const statsRoutes = require('./stats');
+const settingsRoutes = require('./settings');
+const activityLogRoutes = require('./activities');
+>>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
 // ── Mount 
 
 // Auth
@@ -42,8 +48,14 @@ router.use('/publishers', publisherRoutes);
 router.use('/material-types', materialTypeRoutes);
 router.use('/departments', departmentRoutes);
 router.use('/downloads', downloadRoutes);
+<<<<<<< HEAD
 // AI
 router.use('/ai/recommendations', aiRecommendationRoutes);
+=======
+router.use('/stats', statsRoutes);
+router.use('/settings', settingsRoutes);
+router.use('/activities', activityLogRoutes);
+>>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
 
 // ── API info ──────────────────────────────────────────────────────────────────
 router.get('/', (req, res) => {
@@ -66,8 +78,12 @@ router.get('/', (req, res) => {
       materialTypes: '/api/material-types',
       departments: '/api/departments',
       downloads: '/api/downloads',
+<<<<<<< HEAD
       // AI
       aiRecommendations: '/api/ai/recommendations',
+=======
+      activities: '/api/activities',
+>>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
     },
   });
 });
