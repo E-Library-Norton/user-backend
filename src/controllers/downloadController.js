@@ -1,29 +1,203 @@
-// controllers/download.controller.js
-const { Op } = require('sequelize');
+// controllers/downloadController.js
+const https                    = require('https');
+const http                     = require('http');
+const { Op }                   = require('sequelize');
 const { Download, Book, User } = require('../models');
-const ResponseFormatter = require('../utils/responseFormatter');
-const { NotFoundError } = require('../utils/errors');
+const cloudinary               = require('../config/cloudinary');
+const ResponseFormatter        = require('../utils/responseFormatter');
+const { NotFoundError }        = require('../utils/errors');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+function extractPublicId(secureUrl) {
+  if (!secureUrl) return null;
+  // Remove everything up to and including "/upload/" (and optional version segment)
+  const match = secureUrl.match(/\/upload\/(?:v\d+\/)?(.+)$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Generate a time-limited Cloudinary signed URL.
+ * This works even when the Cloudinary account has strict access controls.
+ */
+function signedUrl(publicId, resourceType = 'raw') {
+  return cloudinary.url(publicId, {
+    resource_type: resourceType,
+    sign_url:      true,
+    expires_at:    Math.floor(Date.now() / 1000) + 3600, // valid 1 hour
+    type:          'upload',
+    secure:        true,
+  });
+}
+
+/**
+ * Fetch a URL server-side, following HTTP redirects.
+ * FIX: Added explicit 30s timeout — prevents hanging indefinitely when
+ * Cloudinary or any upstream host is slow / unreachable.
+ */
+function fetchWithRedirect(url, maxRedirects = 5, timeoutMs = 30_000) {
+  return new Promise((resolve, reject) => {
+    const lib = url.startsWith('https') ? https : http;
+
+    const req = lib.get(url, (res) => {
+      if (
+        [301, 302, 307, 308].includes(res.statusCode) &&
+        res.headers.location &&
+        maxRedirects > 0
+      ) {
+        res.resume(); // drain before following redirect
+        return fetchWithRedirect(res.headers.location, maxRedirects - 1, timeoutMs)
+          .then(resolve)
+          .catch(reject);
+      }
+      resolve(res);
+    });
+
+    req.on('error', reject);
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error(`PDF fetch timed out after ${timeoutMs}ms`));
+    });
+  });
+}
+
+/**
+ * Stream a PDF from Cloudinary (or any URL) to the Express response.
+ *
+ * FIX 1: All event listeners are registered BEFORE pipe() is called to
+ *        eliminate the race condition where 'end' fires before the Promise
+ *        constructor runs (reproducible with very small / cached files).
+ *
+ * FIX 2: Listen for res 'finish' (data fully flushed to client) instead of
+ *        upstream 'end' (source drained but TCP buffers may still be in-flight).
+ *
+ * FIX 3: Added 'Access-Control-Allow-Methods' header (was missing before).
+ */
+async function proxyPdf(pdfUrl, res, disposition) {
+  const publicId     = extractPublicId(pdfUrl);
+  const resourceType = pdfUrl.includes('/image/') ? 'image' : 'raw';
+  const fetchUrl     = publicId ? signedUrl(publicId, resourceType) : pdfUrl;
+
+  const upstream = await fetchWithRedirect(fetchUrl);
+
+  if (upstream.statusCode !== 200) {
+    upstream.resume(); // drain to free the socket
+    if (!res.headersSent) {
+      res.status(upstream.statusCode || 502).json({
+        success: false,
+        error: { message: `Could not fetch PDF (upstream status ${upstream.statusCode})` },
+      });
+    }
+    return;
+  }
+
+  const filename    = disposition === 'inline' ? 'preview.pdf' : 'document.pdf';
+  const encodedName = encodeURIComponent(filename);
+
+  res.setHeader('Content-Type',                 upstream.headers['content-type'] || 'application/pdf');
+  res.setHeader('Content-Disposition',          `${disposition}; filename="${filename}"; filename*=UTF-8''${encodedName}`);
+  res.setHeader('Cache-Control',                'private, max-age=3600');
+  res.setHeader('X-Content-Type-Options',       'nosniff');
+  res.setHeader('Access-Control-Allow-Origin',  '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+
+  if (upstream.headers['content-length']) {
+    res.setHeader('Content-Length', upstream.headers['content-length']);
+  }
+
+  // FIX: register listeners FIRST, then call pipe() — avoids the race condition
+  // where the stream ends before Promise constructor sets up listeners.
+  await new Promise((resolve, reject) => {
+    upstream.on('error', (err) => {
+      if (!res.headersSent) {
+        reject(err);
+      } else {
+        upstream.destroy();
+        res.destroy();
+        resolve(); // client already received data, silently close
+      }
+    });
+    res.on('error', (err) => {
+      upstream.destroy();
+      reject(err);
+    });
+    res.on('finish', resolve); // fires when all data is flushed to the client
+
+    upstream.pipe(res); // start streaming — AFTER listeners are attached
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Controller
+// ─────────────────────────────────────────────────────────────────────────────
 
 class DownloadController {
 
-  // POST /api/books/:id/download — record a download
-  static async recordDownload(req, res, next) {
+  /**
+   * GET /api/books/:id/stream?token=<jwt>
+   * Inline PDF preview. Token via ?token= OR Authorization header.
+   * Does NOT create a Download record.
+   */
+  static async streamPdf(req, res, next) {
     try {
-      const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false, isActive: true } });
-      if (!book) throw new NotFoundError('Book not found');
-
-      const ipAddress = req.ip || req.headers['x-forwarded-for'];
-      const download = await Download.create({
-        userId: req.user.id,
-        bookId: book.id,
-        ipAddress,
+      const book = await Book.findOne({
+        where:      { id: req.params.id, isDeleted: false, isActive: true },
+        attributes: ['id', 'title', 'pdfUrl'],
       });
 
-      return ResponseFormatter.success(res, { downloadId: download.id }, 'Download recorded successfully', 201);
-    } catch (err) { next(err); }
+      if (!book)        throw new NotFoundError('Book not found');
+      if (!book.pdfUrl) return ResponseFormatter.error(res, 'No PDF available for this book', 404, 'NO_PDF');
+
+      await proxyPdf(book.pdfUrl, res, 'inline');
+    } catch (err) {
+      // FIX: once pipe() has started, headers are already sent — calling
+      // next(err) would cause "Cannot set headers after they are sent".
+      if (res.headersSent) {
+        res.destroy?.();
+      } else {
+        next(err);
+      }
+    }
   }
 
-  // GET /api/downloads — admin: all downloads with pagination + filters
+  /**
+   * GET /api/books/:id/download?token=<jwt>
+   * Records download, increments counter, streams PDF as attachment.
+   */
+  static async recordDownload(req, res, next) {
+    try {
+      const book = await Book.findOne({
+        where:      { id: req.params.id, isDeleted: false, isActive: true },
+        attributes: ['id', 'title', 'pdfUrl', 'downloads'],
+      });
+
+      if (!book)        throw new NotFoundError('Book not found');
+      if (!book.pdfUrl) return ResponseFormatter.error(res, 'No PDF available for this book', 404, 'NO_PDF');
+
+      // FIX: Stream the PDF FIRST — DB operations must not block or break the download.
+      // If Download.create() fails, the user still receives the file.
+      await proxyPdf(book.pdfUrl, res, 'attachment');
+
+      // Fire-and-forget: record the download after streaming succeeds
+      const ipAddress = req.ip || req.headers['x-forwarded-for'];
+      Download.create({ userId: req.user.id, bookId: book.id, ipAddress })
+        .then(() => book.increment('downloads').catch(console.error))
+        .catch((err) => console.error('Failed to record download:', err));
+
+    } catch (err) {
+      // FIX: same as streamPdf — don't call next(err) after headers are sent
+      if (res.headersSent) {
+        res.destroy?.();
+      } else {
+        next(err);
+      }
+    }
+  }
+
+  // GET /api/downloads — admin: all downloads
   static async getAll(req, res, next) {
     try {
       const { page = 1, limit = 10, userId, bookId, from, to } = req.query;
@@ -34,7 +208,7 @@ class DownloadController {
       if (from || to) {
         where.downloadedAt = {};
         if (from) where.downloadedAt[Op.gte] = new Date(from);
-        if (to) where.downloadedAt[Op.lte] = new Date(to);
+        if (to)   where.downloadedAt[Op.lte] = new Date(to);
       }
 
       const offset = (Number(page) - 1) * Number(limit);
@@ -42,34 +216,32 @@ class DownloadController {
         where,
         include: [
           { model: User, as: 'User', attributes: ['id', 'username', 'email', 'studentId'] },
-          { model: Book, as: 'Book', attributes: ['id', 'title', 'isbn'] },
+          { model: Book, as: 'Book', attributes: ['id', 'title', 'isbn', 'downloads'] },
         ],
-        order: [['downloadedAt', 'DESC']],
-        limit: Number(limit),
+        order:  [['downloadedAt', 'DESC']],
+        limit:  Number(limit),
         offset,
       });
 
       return ResponseFormatter.success(res, {
-        downloads: rows,
-        total: count,
-        page: Number(page),
-        limit: Number(limit),
+        downloads: rows, total: count,
+        page: Number(page), limit: Number(limit),
         totalPages: Math.ceil(count / Number(limit)),
       });
     } catch (err) { next(err); }
   }
 
-  // GET /api/downloads/my — current user's download history
+  // GET /api/downloads/my — current user's history
   static async getMyDownloads(req, res, next) {
     try {
       const { page = 1, limit = 10 } = req.query;
       const offset = (Number(page) - 1) * Number(limit);
 
       const { count, rows } = await Download.findAndCountAll({
-        where: { userId: req.user.id },
-        include: [{ model: Book, as: 'Book', attributes: ['id', 'title', 'isbn', 'coverUrl'] }],
-        order: [['downloadedAt', 'DESC']],
-        limit: Number(limit),
+        where:   { userId: req.user.id },
+        include: [{ model: Book, as: 'Book', attributes: ['id', 'title', 'isbn', 'coverUrl', 'downloads'] }],
+        order:   [['downloadedAt', 'DESC']],
+        limit:   Number(limit),
         offset,
       });
 
@@ -80,20 +252,21 @@ class DownloadController {
     } catch (err) { next(err); }
   }
 
-  // GET /api/downloads/stats — top downloaded books + totals
+  // GET /api/downloads/stats — top books + total
   static async getStats(req, res, next) {
     try {
       const { fn, col, literal } = require('sequelize');
 
-      const topBooks = await Download.findAll({
-        attributes: ['bookId', [fn('COUNT', col('Download.id')), 'downloadCount']],
-        include: [{ model: Book, as: 'Book', attributes: ['id', 'title', 'coverUrl'] }],
-        group: ['bookId', 'Book.id'],
-        order: [[literal('downloadCount'), 'DESC']],
-        limit: 10,
-      });
-
-      const totalDownloads = await Download.count();
+      const [topBooks, totalDownloads] = await Promise.all([
+        Download.findAll({
+          attributes: ['bookId', [fn('COUNT', col('Download.id')), 'downloadCount']],
+          include:    [{ model: Book, as: 'Book', attributes: ['id', 'title', 'coverUrl', 'downloads'] }],
+          group:      ['bookId', 'Book.id'],
+          order:      [[literal('downloadCount'), 'DESC']],
+          limit:      10,
+        }),
+        Download.count(),
+      ]);
 
       return ResponseFormatter.success(res, { totalDownloads, topBooks });
     } catch (err) { next(err); }

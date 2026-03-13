@@ -4,24 +4,7 @@ const { Book, Author, Category, Publisher, MaterialType, Department, Download } 
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 const { logActivity } = require('../utils/activityLogger');
-const cloudinary = require('../config/cloudinary');
-const streamifier = require('streamifier');
-
-
-function uploadToCloudinary(file, folder, resourceType = 'auto') {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: resourceType,
-        use_filename: true,
-        unique_filename: true,
-      },
-      (err, result) => { if (err) reject(err); else resolve(result); }
-    );
-    streamifier.createReadStream(file.buffer).pipe(stream);
-  });
-}
+const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
 
 // ── Shared include for full book detail ───────────────────────────────────────
 const BOOK_INCLUDE = [

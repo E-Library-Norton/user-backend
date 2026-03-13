@@ -87,4 +87,35 @@ const optionalAuth = async (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, authorize, requirePermission, optionalAuth };
+// ── authenticateStream ─────────────────────────────────────────────────────────
+// Like authenticate, but also accepts token from ?token= query param.
+// Use on stream/download routes so URLs can be opened directly in browser.
+const authenticateStream = async (req, res, next) => {
+  try {
+    const token =
+      req.query.token ||
+      req.header('Authorization')?.replace('Bearer ', '');
+
+    if (!token) return ResponseFormatter.unauthorized(res, 'Authentication required');
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    } catch {
+      return ResponseFormatter.unauthorized(res, 'Invalid or expired token');
+    }
+
+    const user = await User.findByPk(decoded.id, {
+      attributes: ['id', 'username', 'email', 'studentId', 'isActive'],
+    });
+
+    if (!user?.isActive) return ResponseFormatter.unauthorized(res, 'Invalid authentication');
+
+    req.user = user;
+    next();
+  } catch {
+    return ResponseFormatter.unauthorized(res, 'Invalid or expired token');
+  }
+};
+
+module.exports = { authenticate, authorize, requirePermission, optionalAuth, authenticateStream };
