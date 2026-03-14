@@ -48,6 +48,11 @@ const Book = sequelize.define(
       allowNull:    false,
       defaultValue: 0,
     },
+    downloads: {
+      type:         DataTypes.INTEGER,
+      allowNull:    false,
+      defaultValue: 0,
+    },
     publisherId: {
       type:  DataTypes.INTEGER,
       field: 'publisher_id',

@@ -1,9 +1,15 @@
-const jwt = require("jsonwebtoken");
-const { Op } = require("sequelize");
+const jwt        = require("jsonwebtoken");
+const path       = require("path");
+const { Op }     = require("sequelize");
 const { User, Role } = require("../models");
 const ResponseFormatter = require("../utils/responseFormatter");
 const { ValidationError, AuthenticationError, NotFoundError } = require("../utils/errors");
+<<<<<<< HEAD
+const cloudinary   = require("../config/cloudinary");
+const streamifier  = require("streamifier");
+=======
 const { logActivity } = require("../utils/activityLogger");
+>>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
 
 class AuthController {
 
@@ -100,9 +106,12 @@ class AuthController {
       return ResponseFormatter.success(res, {
         user: {
           id: user.id,
+          avatar: user.avatar || '',
           username: user.username,
           email: user.email,
           studentId: user.studentId,
+          firstName: user.firstName,
+          lastName: user.lastName,
           roles: user.Roles.map((r) => r.name),
         },
         accessToken,
@@ -110,7 +119,10 @@ class AuthController {
       }, "Login successful");
 
     } catch (err) {
+<<<<<<< HEAD
+=======
       console.log("Error ", err);
+>>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
       next(err);
     }
   }
@@ -198,6 +210,47 @@ class AuthController {
         firstName: user.firstName,
         lastName: user.lastName,
       }, "Profile updated successfully");
+
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // ── POST /api/auth/avatar  (any authenticated user)
+  // Accepts the image file and uploads directly to Cloudinary avatars/ folder.
+  static async uploadAvatar(req, res, next) {
+    try {
+      if (!req.file) {
+        throw new ValidationError("No image file provided");
+      }
+
+      const user = await User.findByPk(req.user.id);
+      if (!user) throw new NotFoundError("User not found");
+
+      // Build a clean public_id from the username
+      const sanitized = user.username
+        .replace(/[^a-zA-Z0-9_-]/g, "_")
+        .toLowerCase()
+        .substring(0, 50);
+      const publicId = `${sanitized}_${Date.now().toString(36)}`;
+      const ext      = path.extname(req.file.originalname).replace(".", "").toLowerCase();
+
+      // Upload to Cloudinary → avatars/ folder
+      const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "avatars", public_id: publicId, resource_type: "image", format: ext || "jpg" },
+          (err, r) => (err ? reject(err) : resolve(r))
+        );
+        streamifier.createReadStream(req.file.buffer).pipe(stream);
+      });
+
+      // Save the secure URL to the user record
+      await user.update({ avatar: result.secure_url });
+
+      return ResponseFormatter.success(res, {
+        avatar: result.secure_url,
+        public_id: result.public_id,
+      }, "Avatar updated successfully");
 
     } catch (err) {
       next(err);

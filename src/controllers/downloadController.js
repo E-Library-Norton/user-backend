@@ -8,48 +8,19 @@ const ResponseFormatter        = require('../utils/responseFormatter');
 const { NotFoundError }        = require('../utils/errors');
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers
+// proxyStream — fetch a URL server-side and pipe it to the Express response.
+// Follows HTTP redirects (Cloudinary raw URLs sometimes redirect once).
 // ─────────────────────────────────────────────────────────────────────────────
 
-
-function extractPublicId(secureUrl) {
-  if (!secureUrl) return null;
-  // Remove everything up to and including "/upload/" (and optional version segment)
-  const match = secureUrl.match(/\/upload\/(?:v\d+\/)?(.+)$/);
-  return match ? match[1] : null;
-}
-
-/**
- * Generate a time-limited Cloudinary signed URL.
- * This works even when the Cloudinary account has strict access controls.
- */
-function signedUrl(publicId, resourceType = 'raw') {
-  return cloudinary.url(publicId, {
-    resource_type: resourceType,
-    sign_url:      true,
-    expires_at:    Math.floor(Date.now() / 1000) + 3600, // valid 1 hour
-    type:          'upload',
-    secure:        true,
-  });
-}
-
-/**
- * Fetch a URL server-side, following HTTP redirects.
- * FIX: Added explicit 30s timeout — prevents hanging indefinitely when
- * Cloudinary or any upstream host is slow / unreachable.
- */
-function fetchWithRedirect(url, maxRedirects = 5, timeoutMs = 30_000) {
+function fetchWithRedirect(url, maxRedirects = 5) {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith('https') ? https : http;
 
-    const req = lib.get(url, (res) => {
-      if (
-        [301, 302, 307, 308].includes(res.statusCode) &&
-        res.headers.location &&
-        maxRedirects > 0
-      ) {
-        res.resume(); // drain before following redirect
-        return fetchWithRedirect(res.headers.location, maxRedirects - 1, timeoutMs)
+    lib.get(url, (res) => {
+      // Follow redirects (301, 302, 307, 308)
+      if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location && maxRedirects > 0) {
+        res.resume(); // drain the body
+        return fetchWithRedirect(res.headers.location, maxRedirects - 1)
           .then(resolve)
           .catch(reject);
       }
@@ -201,7 +172,7 @@ class DownloadController {
   static async getAll(req, res, next) {
     try {
       const { page = 1, limit = 10, userId, bookId, from, to } = req.query;
-      const where = {};
+      const where  = {};
 
       if (userId) where.userId = userId;
       if (bookId) where.bookId = bookId;

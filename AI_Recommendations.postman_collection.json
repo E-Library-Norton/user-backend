@@ -1,0 +1,309 @@
+{
+  "info": {
+    "name": "E-Library — AI Recommendations",
+    "_postman_id": "ai-recommendations-collection",
+    "description": "All AI Recommendation endpoints for Norton University E-Library.\n\nBase URL: http://localhost:5005\n\nFor authenticated routes, set the `{{token}}` variable to your Bearer token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5005",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "YOUR_ACCESS_TOKEN_HERE",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Recommend by Category",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/ai/recommendations?category=Programming",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ai", "recommendations"],
+          "query": [
+            {
+              "key": "category",
+              "value": "Programming",
+              "description": "The book category/genre to recommend from"
+            }
+          ]
+        },
+        "description": "Get AI-recommended books for a given category.\n\nReturns up to 6 books from the library that match the category, with AI-generated reasons.\n\nResponse source:\n- `library` → books matched from the DB\n- `ai-general` → AI suggestion (no DB match found)\n- `cached: true` → served from 5-min cache (no Gemini call made)"
+      },
+      "response": [
+        {
+          "name": "200 — Success (library source)",
+          "status": "OK",
+          "code": 200,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"source\": \"library\",\n    \"category\": \"Programming\",\n    \"recommendations\": [\n      {\n        \"id\": 1,\n        \"title\": \"Clean Code\",\n        \"isbn\": \"978-0132350884\",\n        \"publicationYear\": 2008,\n        \"coverUrl\": \"https://res.cloudinary.com/.../clean_code.jpg\",\n        \"pdfUrl\": \"https://res.cloudinary.com/.../clean_code.pdf\",\n        \"views\": 142,\n        \"Category\": { \"id\": 3, \"name\": \"Programming\", \"nameKh\": null },\n        \"Publisher\": { \"id\": 2, \"name\": \"Prentice Hall\", \"nameKh\": null },\n        \"Department\": { \"id\": 1, \"name\": \"Computer Science\", \"code\": \"CS\" },\n        \"MaterialType\": { \"id\": 1, \"name\": \"Book\", \"nameKh\": null },\n        \"Authors\": [\n          { \"id\": 5, \"name\": \"Robert C. Martin\", \"nameKh\": null, \"BookAuthor\": { \"isPrimaryAuthor\": true } }\n        ],\n        \"aiReason\": \"A must-read for writing maintainable, professional-grade code.\"\n      }\n    ],\n    \"total\": 1,\n    \"cached\": false\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "2. Recommend by Book Title",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/ai/recommendations?bookTitle=Clean Code",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ai", "recommendations"],
+          "query": [
+            {
+              "key": "bookTitle",
+              "value": "Clean Code",
+              "description": "Title of a book the user liked — returns similar books"
+            }
+          ]
+        },
+        "description": "Get books similar to the given title.\n\nFinds the book in the DB, looks at its category, then asks Gemini to pick the 5 most similar books from the same category."
+      },
+      "response": [
+        {
+          "name": "200 — Success",
+          "status": "OK",
+          "code": 200,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"source\": \"library\",\n    \"basedOn\": \"Clean Code\",\n    \"bookFound\": true,\n    \"recommendations\": [\n      {\n        \"id\": 7,\n        \"title\": \"The Pragmatic Programmer\",\n        \"coverUrl\": \"https://res.cloudinary.com/.../pragmatic.jpg\",\n        \"views\": 98,\n        \"Category\": { \"id\": 3, \"name\": \"Programming\", \"nameKh\": null },\n        \"Authors\": [\n          { \"id\": 10, \"name\": \"David Thomas\", \"nameKh\": null, \"BookAuthor\": { \"isPrimaryAuthor\": true } }\n        ],\n        \"aiReason\": \"Shares Clean Code's philosophy of writing elegant, maintainable software.\"\n      }\n    ],\n    \"total\": 1,\n    \"cached\": false\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "3. Recommend by User History (requires auth)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "description": "JWT access token"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ai/recommendations?userId=current",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ai", "recommendations"],
+          "query": [
+            {
+              "key": "userId",
+              "value": "current",
+              "description": "Always use 'current' — the actual user ID is read from the JWT"
+            }
+          ]
+        },
+        "description": "Get personalised recommendations based on the authenticated user's download/reading history.\n\nRequires a valid Bearer token.\n\nIf the user has no history, returns the 6 most popular (most-viewed) books instead."
+      },
+      "response": [
+        {
+          "name": "200 — With history",
+          "status": "OK",
+          "code": 200,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"source\": \"library\",\n    \"basedOn\": \"reading-history\",\n    \"historyCount\": 8,\n    \"recommendations\": [\n      {\n        \"id\": 12,\n        \"title\": \"Design Patterns\",\n        \"aiReason\": \"Matches your interest in software architecture and object-oriented design.\"\n      }\n    ],\n    \"total\": 1\n  }\n}"
+        },
+        {
+          "name": "200 — No history (popular fallback)",
+          "status": "OK",
+          "code": 200,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"source\": \"popular\",\n    \"message\": \"No reading history found — showing most popular books\",\n    \"recommendations\": [],\n    \"total\": 0\n  }\n}"
+        },
+        {
+          "name": "401 — Unauthorized",
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"UNAUTHORIZED\",\n    \"message\": \"Authentication required\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "4. Trending Books",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/ai/recommendations/trending?limit=6",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ai", "recommendations", "trending"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "6",
+              "description": "Number of results (max 20, default 6)"
+            }
+          ]
+        },
+        "description": "Get trending books based on the most downloads in the last 30 days and overall most views.\n\nGemini generates a one-sentence reason why each book is trending.\n\nCached for 5 minutes."
+      },
+      "response": [
+        {
+          "name": "200 — Success",
+          "status": "OK",
+          "code": 200,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"source\": \"trending\",\n    \"period\": \"last-30-days\",\n    \"recommendations\": [\n      {\n        \"id\": 3,\n        \"title\": \"Introduction to Algorithms\",\n        \"coverUrl\": \"https://res.cloudinary.com/.../algo.jpg\",\n        \"views\": 320,\n        \"Category\": { \"id\": 2, \"name\": \"Computer Science\", \"nameKh\": null },\n        \"Authors\": [\n          { \"id\": 2, \"name\": \"Thomas H. Cormen\", \"nameKh\": null, \"BookAuthor\": { \"isPrimaryAuthor\": true } }\n        ],\n        \"aiReason\": \"Trending because it is the go-to reference for algorithm courses this semester.\"\n      }\n    ],\n    \"total\": 1,\n    \"cached\": false\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "5. Similar Books by Book ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/ai/recommendations/similar/1",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ai", "recommendations", "similar", "1"],
+          "variable": [
+            {
+              "key": "bookId",
+              "value": "1",
+              "description": "The database ID of the book to find similar books for"
+            }
+          ]
+        },
+        "description": "Get similar books to a specific book using its database ID.\n\nLooks up the book title from the DB, then runs the same logic as `?bookTitle=...`."
+      },
+      "response": [
+        {
+          "name": "200 — Success",
+          "status": "OK",
+          "code": 200,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"source\": \"library\",\n    \"basedOn\": \"Clean Code\",\n    \"bookFound\": true,\n    \"recommendations\": [],\n    \"total\": 0\n  }\n}"
+        },
+        {
+          "name": "404 — Book Not Found",
+          "status": "Not Found",
+          "code": 404,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"NOT_FOUND\",\n    \"message\": \"Book with id=999 not found\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "6. Personalized Recommendations (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"readingHistory\": [\n    { \"title\": \"Clean Code\", \"author\": \"Robert C. Martin\" },\n    { \"title\": \"The Pragmatic Programmer\", \"author\": \"David Thomas\" }\n  ],\n  \"categoryIds\": [1, 3],\n  \"bookId\": 5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ai/recommendations/personalized",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ai", "recommendations", "personalized"]
+        },
+        "description": "Get personalised recommendations by providing your own data.\n\nAll three fields are optional, but at least one must be present:\n- `readingHistory` — list of books the user has already read\n- `categoryIds` — array of category IDs to narrow results\n- `bookId` — a specific book to use as reference\n\nBooks already in `readingHistory` are excluded from recommendations."
+      },
+      "response": [
+        {
+          "name": "200 — Success",
+          "status": "OK",
+          "code": 200,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"source\": \"library\",\n    \"recommendations\": [\n      {\n        \"id\": 9,\n        \"title\": \"Refactoring\",\n        \"Category\": { \"id\": 3, \"name\": \"Programming\", \"nameKh\": null },\n        \"Authors\": [\n          { \"id\": 6, \"name\": \"Martin Fowler\", \"nameKh\": null, \"BookAuthor\": { \"isPrimaryAuthor\": true } }\n        ],\n        \"aiReason\": \"Perfect follow-up for readers who enjoyed Clean Code and want to learn systematic improvement techniques.\"\n      }\n    ],\n    \"total\": 1\n  }\n}"
+        },
+        {
+          "name": "400 — Validation Error",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"Provide at least one of: readingHistory, categoryIds, or bookId\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "7. AI Librarian Chat",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"What are some good books to start learning machine learning?\",\n  \"context\": {\n    \"currentBook\": \"Clean Code\",\n    \"currentCategory\": \"Programming\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ai/recommendations/chat",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ai", "recommendations", "chat"]
+        },
+        "description": "Conversational AI librarian assistant.\n\nAsk any book-related, reading, academic, or library question.\n\nFields:\n- `message` (required) — The student's question. Max 500 characters.\n- `context.currentBook` (optional) — The book the student is currently viewing\n- `context.currentCategory` (optional) — The category the student is currently browsing\n\nThe AI knows the total number of books in the library and the available categories."
+      },
+      "response": [
+        {
+          "name": "200 — AI Reply",
+          "status": "OK",
+          "code": 200,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": true,\n  \"message\": \"Success\",\n  \"data\": {\n    \"message\": \"Great question! For machine learning beginners, I'd recommend starting with 'Hands-On Machine Learning with Scikit-Learn and TensorFlow' by Aurélien Géron — it's very practical. You might also enjoy 'Pattern Recognition and Machine Learning' by Christopher Bishop for a deeper theoretical foundation. Check our Programming and Computer Science sections for these titles!\",\n    \"role\": \"assistant\"\n  }\n}"
+        },
+        {
+          "name": "400 — Empty Message",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"message is required\"\n  }\n}"
+        },
+        {
+          "name": "400 — Message Too Long",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"message must be 500 characters or less\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "8. Rate Limit Test (no params)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/ai/recommendations",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ai", "recommendations"]
+        },
+        "description": "Calling without any query params returns a 400 with usage instructions."
+      },
+      "response": [
+        {
+          "name": "400 — No params",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"success\": false,\n  \"message\": \"Provide one of: category, bookTitle, or userId=current\",\n  \"examples\": [\n    \"GET /api/ai/recommendations?category=Programming\",\n    \"GET /api/ai/recommendations?bookTitle=Clean+Code\",\n    \"GET /api/ai/recommendations?userId=current  (requires Authorization header)\"\n  ]\n}"
+        }
+      ]
+    }
+  ]
+}

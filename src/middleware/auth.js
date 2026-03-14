@@ -29,7 +29,7 @@ const authenticate = async (req, res, next) => {
         { association: 'Permissions', through: { attributes: [] } },
       ],
       // ✅ Only select columns you actually need
-      attributes: ['id', 'username', 'email', 'studentId', 'firstName', 'lastName', 'isActive'],
+      attributes: ['id', 'avatar', 'username', 'email', 'studentId', 'firstName', 'lastName', 'isActive'],
     });
 
     if (!user?.isActive) {
