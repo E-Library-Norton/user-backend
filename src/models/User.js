@@ -15,11 +15,7 @@ const User = sequelize.define(
     avatar: {
       type: DataTypes.STRING(500),
       allowNull: true,
-<<<<<<< HEAD
-      defaultValue: '',   // empty string = no avatar (client shows initials fallback)
-=======
       defaultValue: null,
->>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
     },
     username: {
       type: DataTypes.STRING(50),

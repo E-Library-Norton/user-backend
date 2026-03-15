@@ -45,13 +45,8 @@ class ResponseFormatter {
     return res.status(statusCode).json(response);
   }
 
-  static noContent(res, data = null, message = "No content") {
-    const response = {
-      success: true,
-      message,
-      data,
-    };
-    return res.status(204).json(response);
+  static noContent(res) {
+    return res.status(204).end();
   }
 
   static notFound(res, message = "Resource not found") {

@@ -4,12 +4,9 @@ const { Op }     = require("sequelize");
 const { User, Role } = require("../models");
 const ResponseFormatter = require("../utils/responseFormatter");
 const { ValidationError, AuthenticationError, NotFoundError } = require("../utils/errors");
-<<<<<<< HEAD
-const cloudinary   = require("../config/cloudinary");
-const streamifier  = require("streamifier");
-=======
+const cloudinary      = require("../config/cloudinary");
+const streamifier     = require("streamifier");
 const { logActivity } = require("../utils/activityLogger");
->>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
 
 class AuthController {
 
@@ -119,10 +116,6 @@ class AuthController {
       }, "Login successful");
 
     } catch (err) {
-<<<<<<< HEAD
-=======
-      console.log("Error ", err);
->>>>>>> 2583949b3258be8c076203b25f1f09d42f3d2e15
       next(err);
     }
   }
@@ -143,7 +136,9 @@ class AuthController {
       }
 
       // Still check user is active (edge case: account disabled after token issued)
-      const user = await User.findByPk(decoded.id);
+      const user = await User.findByPk(decoded.id, {
+        include: { association: "Roles", through: { attributes: [] } },
+      });
       if (!user) throw new AuthenticationError("User not found");
       if (!user.isActive) throw new AuthenticationError("Account is deactivated");
 

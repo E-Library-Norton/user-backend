@@ -92,7 +92,6 @@ class RoleController {
   // ── DELETE /api/roles/:id 
   static async delete(req, res, next) {
     try {
-      console.log(`Attempting to delete role with ID: ${req.params.id}`);
       const role = await Role.findByPk(req.params.id);
       if (!role) throw new NotFoundError("Role not found");
       await role.destroy();

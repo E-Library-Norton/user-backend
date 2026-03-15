@@ -57,10 +57,12 @@ async function proxyStream(cloudinaryUrl, res, disposition, filename) {
     res.setHeader('Content-Length', upstream.headers['content-length']);
   }
 
-  upstream.pipe(res);
+  // Register listeners BEFORE pipe to avoid race condition on small files
   await new Promise((resolve, reject) => {
-    upstream.on('end',   resolve);
     upstream.on('error', reject);
+    res.on('error',  reject);
+    res.on('finish', resolve);
+    upstream.pipe(res);
   });
 }
 
@@ -87,7 +89,9 @@ class DownloadController {
       if (!book.pdfUrl) return ResponseFormatter.error(res, 'No PDF available for this book', 404, 'NO_PDF');
 
       await proxyStream(book.pdfUrl, res, 'inline', safeFilename(book.title));
-    } catch (err) { next(err); }
+    } catch (err) {
+      if (res.headersSent) { res.destroy?.(); } else { next(err); }
+    }
   }
 
   /**
@@ -115,7 +119,9 @@ class DownloadController {
       res.setHeader('X-Download-Id', download.id);
 
       await proxyStream(book.pdfUrl, res, 'attachment', safeFilename(book.title));
-    } catch (err) { next(err); }
+    } catch (err) {
+      if (res.headersSent) { res.destroy?.(); } else { next(err); }
+    }
   }
 
   // GET /api/downloads  — admin: all downloads
@@ -176,15 +182,19 @@ class DownloadController {
   // GET /api/downloads/stats  — top books + total count
   static async getStats(req, res, next) {
     try {
-      const { fn, col, literal } = require('sequelize');
+      const { fn, col } = require('sequelize');
+      const countExpr = fn('COUNT', col('Download.id'));
 
       const [topBooks, totalDownloads] = await Promise.all([
         Download.findAll({
-          attributes: ['bookId', [fn('COUNT', col('Download.id')), 'downloadCount']],
-          include:    [{ model: Book, as: 'Book', attributes: ['id', 'title', 'coverUrl', 'downloads'] }],
-          group:      ['bookId', 'Book.id'],
-          order:      [[literal('downloadCount'), 'DESC']],
-          limit:      10,
+          attributes: [
+            [col('Download.book_id'), 'bookId'],
+            [countExpr, 'downloadCount'],
+          ],
+          include: [{ model: Book, as: 'Book', attributes: ['id', 'title', 'coverUrl', 'downloads'] }],
+          group:   [col('Download.book_id'), col('Book.id')],
+          order:   [[countExpr, 'DESC']],
+          limit:   10,
         }),
         Download.count(),
       ]);

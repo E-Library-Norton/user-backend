@@ -24,7 +24,7 @@ class PermissionController {
         include: [{ association: "Roles", through: { attributes: [] } }],
         order: [["name", "ASC"]],
       });
-      return ResponseFormatter.success(res, { permissions });
+      return ResponseFormatter.success(res, permissions);
     } catch (err) {
       next(err);
     }

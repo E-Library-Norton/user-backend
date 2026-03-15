@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const PermissionController = require("../controllers/permissionController");
-const { authenticate, authorize, requirePermission } = require("../middleware/auth");
+const { authenticate, requirePermission } = require("../middleware/auth");
 const { permissionRules } = require("../middleware/validation");
 
 router.use(authenticate);

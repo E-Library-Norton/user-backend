@@ -104,74 +104,6 @@ const permissionRules = {
   ],
 };
 
-// Thesis validation rules
-const thesisValidation = {
-  create: [
-    body("title")
-      .trim()
-      .notEmpty()
-      .withMessage("Title is required")
-      .isLength({ max: 500 })
-      .withMessage("Title too long"),
-    body("author").trim().notEmpty().withMessage("Author is required"),
-    body("university").trim().notEmpty().withMessage("University is required"),
-    body("year")
-      .isInt({ min: 1900, max: new Date().getFullYear() + 1 })
-      .withMessage("Valid year is required"),
-    body("category").trim().notEmpty().withMessage("Category is required"),
-    body("tags").optional(),
-    validate,
-  ],
-
-  update: [
-    param("id").isInt().withMessage("Valid ID is required"),
-    body("title")
-      .optional()
-      .trim()
-      .isLength({ max: 500 })
-      .withMessage("Title too long"),
-    body("year")
-      .optional()
-      .isInt({ min: 1900, max: new Date().getFullYear() + 1 })
-      .withMessage("Valid year is required"),
-    validate,
-  ],
-};
-
-// Publication validation rules
-const publicationValidation = {
-  create: [
-    body("title").trim().notEmpty().withMessage("Title is required"),
-    body("author").trim().notEmpty().withMessage("Author is required"),
-    body("year")
-      .isInt({ min: 1900, max: new Date().getFullYear() + 1 })
-      .withMessage("Valid year is required"),
-    body("category").trim().notEmpty().withMessage("Category is required"),
-    validate,
-  ],
-
-  update: [param("id").isInt().withMessage("Valid ID is required"), validate],
-};
-
-// Journal validation rules
-const journalValidation = {
-  create: [
-    body("title").trim().notEmpty().withMessage("Title is required"),
-    body("author").trim().notEmpty().withMessage("Author is required"),
-    body("year")
-      .isInt({ min: 1900, max: new Date().getFullYear() + 1 })
-      .withMessage("Valid year is required"),
-    body("issn")
-      .optional()
-      .matches(/^\d{4}-\d{3}[\dX]$/)
-      .withMessage("Invalid ISSN format (should be XXXX-XXXX)"),
-    validate,
-  ],
-
-  update: [param("id").isInt().withMessage("Valid ID is required"), validate],
-};
-
-
 // Query validation
 const queryValidation = {
   pagination: [
@@ -207,9 +139,6 @@ module.exports = {
   userValidation,
   userRules,
   permissionRules,
-  thesisValidation,
-  publicationValidation,
-  journalValidation,
   queryValidation,
   idValidation,
 };
