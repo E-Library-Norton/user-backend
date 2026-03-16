@@ -1,20 +1,16 @@
-// ============================================
-// FILE: src/routes/auth.js
-// ============================================
-
-const express        = require('express');
-const multer         = require('multer');
-const router         = express.Router();
-const AuthController = require('../controllers/authController');
+const express          = require('express');
+const multer           = require('multer');
+const router           = express.Router();
+const AuthController   = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 const { userValidation } = require('../middleware/validation');
 const { MAX_FILE_SIZES, FILE_TYPES } = require('../config/constants');
 
-// Multer for avatar uploads (images only, max 5 MB, memory storage)
+// Memory-based multer for avatar (Cloudinary needs buffer)
 const avatarUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZES.IMAGE },
-  fileFilter: (_req, file, cb) => {
+  fileFilter(_req, file, cb) {
     const allowed = Array.isArray(FILE_TYPES.IMAGE) ? FILE_TYPES.IMAGE : [FILE_TYPES.IMAGE];
     cb(allowed.includes(file.mimetype) ? null : new Error('Only image files allowed'), allowed.includes(file.mimetype));
   },

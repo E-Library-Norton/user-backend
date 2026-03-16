@@ -3,8 +3,7 @@ const { Op } = require('sequelize');
 const { Book, Author, Category, Publisher, MaterialType, Department, Download } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
-const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
-const { logActivity }        = require('../utils/activityLogger');
+const { logActivity } = require('../utils/activityLogger');
 
 // ── Shared include for full book detail ───────────────────────────────────────
 const BOOK_INCLUDE = [
@@ -110,18 +109,9 @@ class BookController {
         try { parsedAuthorIds = JSON.parse(authorIds); } catch { parsedAuthorIds = []; }
       }
 
-      // Upload files to Cloudinary if provided
-      let coverUrl = req.body.coverUrl ?? null;
-      let pdfUrl = req.body.pdfUrl ?? null;
-
-      if (req.files?.cover?.[0]) {
-        const result = await uploadToCloudinary(req.files.cover[0], 'books/covers', 'image');
-        coverUrl = result.secure_url;
-      }
-      if (req.files?.pdf?.[0]) {
-        const result = await uploadToCloudinary(req.files.pdf[0], 'books/pdfs', 'raw');
-        pdfUrl = result.secure_url;
-      }
+      // Files are pre-uploaded via POST /api/upload/single — accept URLs from body
+      const coverUrl = req.body.coverUrl ?? null;
+      const pdfUrl   = req.body.pdfUrl   ?? null;
 
       const book = await Book.create({
         title, titleKh, isbn, publicationYear, description,
@@ -184,18 +174,9 @@ class BookController {
         try { parsedAuthorIds = JSON.parse(authorIds); } catch { parsedAuthorIds = undefined; }
       }
 
-      // Upload new files to Cloudinary if provided
-      let coverUrl = req.body.coverUrl;
-      let pdfUrl = req.body.pdfUrl;
-
-      if (req.files?.cover?.[0]) {
-        const result = await uploadToCloudinary(req.files.cover[0], 'books/covers', 'image');
-        coverUrl = result.secure_url;
-      }
-      if (req.files?.pdf?.[0]) {
-        const result = await uploadToCloudinary(req.files.pdf[0], 'books/pdfs', 'raw');
-        pdfUrl = result.secure_url;
-      }
+      // Files are pre-uploaded via POST /api/upload/single — accept URLs from body
+      const coverUrl = req.body.coverUrl;
+      const pdfUrl   = req.body.pdfUrl;
 
       await book.update({
         ...(title !== undefined && { title }),

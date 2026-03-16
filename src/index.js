@@ -14,6 +14,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3001',
   'https://elibrary-user.vercel.app',
   'https://elibrary-dashboard.vercel.app',
+  'https://frontend-admin-dev.vercel.app',
 ];
 
 app.get("/", (req, res) => {

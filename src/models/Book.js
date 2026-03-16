@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/models/Thesis.js (UPDATED)
+// FILE: src/models/Book.js (UPDATED)
 // ============================================
 
 const { DataTypes } = require("sequelize");
