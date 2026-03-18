@@ -87,6 +87,7 @@ const optionalAuth = async (req, res, next) => {
   next();
 };
 
+<<<<<<< HEAD
 // ── authenticateStream ────────────────────────────────────────────────────────
 // Same as authenticate but also accepts token from ?token= query param.
 // Use this for stream/download endpoints that must be openable directly in a
@@ -94,13 +95,24 @@ const optionalAuth = async (req, res, next) => {
 const authenticateStream = async (req, res, next) => {
   try {
     // Accept token from header OR query param
+=======
+// ── authenticateStream ─────────────────────────────────────────────────────────
+// Like authenticate, but also accepts token from ?token= query param.
+// Use on stream/download routes so URLs can be opened directly in browser.
+const authenticateStream = async (req, res, next) => {
+  try {
+>>>>>>> 5caed4a (feat: fix issues get pdf file)
     const token =
       req.query.token ||
       req.header('Authorization')?.replace('Bearer ', '');
 
+<<<<<<< HEAD
     if (!token) {
       return ResponseFormatter.unauthorized(res, 'Authentication required');
     }
+=======
+    if (!token) return ResponseFormatter.unauthorized(res, 'Authentication required');
+>>>>>>> 5caed4a (feat: fix issues get pdf file)
 
     let decoded;
     try {
@@ -113,6 +125,7 @@ const authenticateStream = async (req, res, next) => {
       attributes: ['id', 'username', 'email', 'studentId', 'isActive'],
     });
 
+<<<<<<< HEAD
     if (!user?.isActive) {
       return ResponseFormatter.unauthorized(res, 'Invalid authentication');
     }
@@ -120,6 +133,13 @@ const authenticateStream = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+=======
+    if (!user?.isActive) return ResponseFormatter.unauthorized(res, 'Invalid authentication');
+
+    req.user = user;
+    next();
+  } catch {
+>>>>>>> 5caed4a (feat: fix issues get pdf file)
     return ResponseFormatter.unauthorized(res, 'Invalid or expired token');
   }
 };
