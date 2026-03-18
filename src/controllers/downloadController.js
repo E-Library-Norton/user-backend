@@ -1,55 +1,4 @@
 // controllers/downloadController.js
-<<<<<<< HEAD
-const path                     = require('path');
-const { Readable }             = require('stream');
-const { Op }                   = require('sequelize');
-const { Download, Book, User } = require('../models');
-const ResponseFormatter        = require('../utils/responseFormatter');
-const { NotFoundError }        = require('../utils/errors');
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-// Extract the original filename from the Cloudinary URL.
-// e.g. ".../raw/upload/books/pdfs/cafe.pdf" → "cafe.pdf"
-function pdfFilename(pdfUrl) {
-  try {
-    return path.basename(new URL(pdfUrl).pathname); // "cafe.pdf"
-  } catch {
-    return 'file.pdf';
-  }
-}
-
-// Fetch the Cloudinary URL and pipe it to the Express response.
-async function pipeFromCloudinary(pdfUrl, res, disposition) {
-  const cloudRes = await fetch(pdfUrl);
-
-  if (!cloudRes.ok || !cloudRes.body) {
-    return false; // caller handles error
-  }
-
-  const filename = pdfFilename(pdfUrl);
-  const encoded  = encodeURIComponent(filename);
-
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `${disposition}; filename="${filename}"; filename*=UTF-8''${encoded}`);
-  res.setHeader('Cache-Control', 'private, max-age=3600');
-
-  const contentLength = cloudRes.headers.get('content-length');
-  if (contentLength) res.setHeader('Content-Length', contentLength);
-
-  await new Promise((resolve, reject) => {
-    const readable = Readable.fromWeb(cloudRes.body);
-    readable.on('error', reject);
-    res.on('error', reject);
-    res.on('finish', resolve);
-    readable.pipe(res);
-  });
-
-  return true;
-}
-
-// ── Controller ────────────────────────────────────────────────────────────────
-=======
 const https                    = require('https');
 const http                     = require('http');
 const { Op }                   = require('sequelize');
@@ -116,15 +65,6 @@ function fetchWithRedirect(url, maxRedirects = 5, timeoutMs = 30_000) {
 
 /**
  * Stream a PDF from Cloudinary (or any URL) to the Express response.
- *
- * FIX 1: All event listeners are registered BEFORE pipe() is called to
- *        eliminate the race condition where 'end' fires before the Promise
- *        constructor runs (reproducible with very small / cached files).
- *
- * FIX 2: Listen for res 'finish' (data fully flushed to client) instead of
- *        upstream 'end' (source drained but TCP buffers may still be in-flight).
- *
- * FIX 3: Added 'Access-Control-Allow-Methods' header (was missing before).
  */
 async function proxyPdf(pdfUrl, res, disposition) {
   const publicId     = extractPublicId(pdfUrl);
@@ -184,68 +124,37 @@ async function proxyPdf(pdfUrl, res, disposition) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Controller
 // ─────────────────────────────────────────────────────────────────────────────
->>>>>>> 5caed4a (feat: fix issues get pdf file)
 
 class DownloadController {
 
   /**
-<<<<<<< HEAD
-   * GET /api/books/:id/stream
-   * Pipes the PDF inline so the browser renders it (e.g. in an <iframe>).
-   * Content-Disposition: inline; filename="cafe.pdf"
-   * Does NOT record a Download row.
-=======
    * GET /api/books/:id/stream?token=<jwt>
    * Inline PDF preview. Token via ?token= OR Authorization header.
    * Does NOT create a Download record.
->>>>>>> 5caed4a (feat: fix issues get pdf file)
    */
   static async streamPdf(req, res, next) {
     try {
       const book = await Book.findOne({
         where:      { id: req.params.id, isDeleted: false, isActive: true },
-<<<<<<< HEAD
-        attributes: ['id', 'pdfUrl'],
-=======
         attributes: ['id', 'title', 'pdfUrl'],
->>>>>>> 5caed4a (feat: fix issues get pdf file)
       });
 
       if (!book)        throw new NotFoundError('Book not found');
       if (!book.pdfUrl) return ResponseFormatter.error(res, 'No PDF available for this book', 404, 'NO_PDF');
 
-<<<<<<< HEAD
-      const ok = await pipeFromCloudinary(book.pdfUrl, res, 'inline');
-      if (!ok && !res.headersSent) {
-        return ResponseFormatter.error(res, 'Could not fetch PDF from storage', 502, 'FETCH_ERROR');
-      }
-    } catch (err) {
-      if (res.headersSent) res.destroy?.();
-      else next(err);
-=======
       await proxyPdf(book.pdfUrl, res, 'inline');
     } catch (err) {
-      // FIX: once pipe() has started, headers are already sent — calling
-      // next(err) would cause "Cannot set headers after they are sent".
       if (res.headersSent) {
         res.destroy?.();
       } else {
         next(err);
       }
->>>>>>> 5caed4a (feat: fix issues get pdf file)
     }
   }
 
   /**
-<<<<<<< HEAD
-   * GET /api/books/:id/download
-   * Records a Download row, increments book.downloads, then pipes the PDF
-   * as an attachment so the browser opens "Save As: cafe.pdf".
-   * Content-Disposition: attachment; filename="cafe.pdf"
-=======
    * GET /api/books/:id/download?token=<jwt>
    * Records download, increments counter, streams PDF as attachment.
->>>>>>> 5caed4a (feat: fix issues get pdf file)
    */
   static async recordDownload(req, res, next) {
     try {
@@ -257,27 +166,6 @@ class DownloadController {
       if (!book)        throw new NotFoundError('Book not found');
       if (!book.pdfUrl) return ResponseFormatter.error(res, 'No PDF available for this book', 404, 'NO_PDF');
 
-<<<<<<< HEAD
-      const ipAddress = req.ip || req.headers['x-forwarded-for'];
-      const [download] = await Promise.all([
-        Download.create({ userId: req.user.id, bookId: book.id, ipAddress }),
-        book.increment('downloads'),
-      ]);
-
-      res.setHeader('X-Download-Id', download.id);
-
-      const ok = await pipeFromCloudinary(book.pdfUrl, res, 'attachment');
-      if (!ok && !res.headersSent) {
-        return ResponseFormatter.error(res, 'Could not fetch PDF from storage', 502, 'FETCH_ERROR');
-      }
-    } catch (err) {
-      if (res.headersSent) res.destroy?.();
-      else next(err);
-    }
-  }
-
-  // GET /api/downloads
-=======
       // FIX: Stream the PDF FIRST — DB operations must not block or break the download.
       // If Download.create() fails, the user still receives the file.
       await proxyPdf(book.pdfUrl, res, 'attachment');
@@ -289,7 +177,6 @@ class DownloadController {
         .catch((err) => console.error('Failed to record download:', err));
 
     } catch (err) {
-      // FIX: same as streamPdf — don't call next(err) after headers are sent
       if (res.headersSent) {
         res.destroy?.();
       } else {
@@ -299,7 +186,6 @@ class DownloadController {
   }
 
   // GET /api/downloads — admin: all downloads
->>>>>>> 5caed4a (feat: fix issues get pdf file)
   static async getAll(req, res, next) {
     try {
       const { page = 1, limit = 10, userId, bookId, from, to } = req.query;
@@ -332,11 +218,7 @@ class DownloadController {
     } catch (err) { next(err); }
   }
 
-<<<<<<< HEAD
-  // GET /api/downloads/my
-=======
   // GET /api/downloads/my — current user's history
->>>>>>> 5caed4a (feat: fix issues get pdf file)
   static async getMyDownloads(req, res, next) {
     try {
       const { page = 1, limit = 10 } = req.query;
@@ -357,20 +239,14 @@ class DownloadController {
     } catch (err) { next(err); }
   }
 
-<<<<<<< HEAD
-  // GET /api/downloads/stats
-  static async getStats(_req, res, next) {
-=======
   // GET /api/downloads/stats — top books + total
   static async getStats(req, res, next) {
->>>>>>> 5caed4a (feat: fix issues get pdf file)
-    try {
+   try {
       const { fn, col } = require('sequelize');
       const countExpr   = fn('COUNT', col('Download.id'));
 
       const [topBooks, totalDownloads] = await Promise.all([
         Download.findAll({
-<<<<<<< HEAD
           attributes: [
             [col('Download.book_id'), 'bookId'],
             [countExpr, 'downloadCount'],
@@ -379,13 +255,6 @@ class DownloadController {
           group:   [col('Download.book_id'), col('Book.id')],
           order:   [[countExpr, 'DESC']],
           limit:   10,
-=======
-          attributes: ['bookId', [fn('COUNT', col('Download.id')), 'downloadCount']],
-          include:    [{ model: Book, as: 'Book', attributes: ['id', 'title', 'coverUrl', 'downloads'] }],
-          group:      ['bookId', 'Book.id'],
-          order:      [[literal('downloadCount'), 'DESC']],
-          limit:      10,
->>>>>>> 5caed4a (feat: fix issues get pdf file)
         }),
         Download.count(),
       ]);

@@ -4,10 +4,7 @@ const { Book, Author, Category, Publisher, MaterialType, Department, Download } 
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 const { logActivity } = require('../utils/activityLogger');
-<<<<<<< HEAD
-=======
 const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
->>>>>>> 5caed4a (feat: fix issues get pdf file)
 
 // ── Shared include for full book detail ───────────────────────────────────────
 const BOOK_INCLUDE = [

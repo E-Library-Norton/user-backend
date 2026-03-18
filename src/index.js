@@ -60,15 +60,28 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 
 const PORT = process.env.PORT || 5005;
 
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log("Database connected successfully!");
-    return sequelize.sync();
-  })
-  .then(() => {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch((err) => {
-    console.error("Database connection failed:", err);
-  });
+// Render free-tier databases go to sleep after inactivity.
+// The first connection attempt wakes them up but may drop immediately.
+// This retry loop waits 3 seconds and tries again automatically.
+async function connectWithRetry(retries = 5, delayMs = 3000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await sequelize.authenticate();
+      console.log("Database connected successfully!");
+      await sequelize.sync();
+      app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+      return;
+    } catch (err) {
+      console.warn(`DB connection attempt ${attempt}/${retries} failed: ${err.message}`);
+      if (attempt < retries) {
+        console.log(`Retrying in ${delayMs / 1000}s...`);
+        await new Promise((r) => setTimeout(r, delayMs));
+      } else {
+        console.error("Could not connect to database after several retries. Exiting.");
+        process.exit(1);
+      }
+    }
+  }
+}
+
+connectWithRetry();
