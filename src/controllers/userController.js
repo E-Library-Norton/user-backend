@@ -7,7 +7,8 @@ const { ValidationError, NotFoundError, ConflictError } = require("../utils/erro
 const { logActivity } = require("../utils/activityLogger");
 
 class UserController {
-  // ── GET /api/users 
+
+  // ── GET /api/users ────────────────────────────────────────────────────────
   static async getAll(req, res, next) {
     try {
       const page = Math.max(parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE, 1);
@@ -30,7 +31,7 @@ class UserController {
     }
   }
 
-  // ── GET /api/users/:id 
+  // ── GET /api/users/:id ────────────────────────────────────────────────────
   static async getById(req, res, next) {
     try {
       const user = await User.findByPk(req.params.id, {
@@ -48,7 +49,7 @@ class UserController {
     }
   }
 
-  // ── POST /api/users  (admin creates a user directly) 
+  // ── POST /api/users  (admin creates a user directly) ──────────────────────
   static async create(req, res, next) {
     try {
       const { username, email, password, firstName, lastName, studentId, roleIds = [] } = req.body;
@@ -56,8 +57,10 @@ class UserController {
       const takenUsername = await User.findOne({ where: { username } });
       if (takenUsername) throw new ConflictError("Username already taken");
 
-      const takenStudentId = await User.findOne({ where: { studentId } });
-      if (takenStudentId) throw new ConflictError("Student ID already registered");
+      if (studentId) {
+        const takenStudentId = await User.findOne({ where: { studentId } });
+        if (takenStudentId) throw new ConflictError("Student ID already registered");
+      }
 
       const takenEmail = await User.findOne({ where: { email } });
       if (takenEmail) throw new ConflictError("Email already registered");
@@ -78,7 +81,7 @@ class UserController {
         targetId: user.id,
         targetName: `${firstName || ''} ${lastName || ''}`.trim() || username,
         ipAddress: req.ip,
-        userAgent: req.get("user-agent")
+        userAgent: req.get("user-agent"),
       });
 
       const created = await User.findByPk(user.id, {
@@ -91,17 +94,18 @@ class UserController {
     }
   }
 
-  // ── PUT /api/users/:id 
+  // ── PUT /api/users/:id ────────────────────────────────────────────────────
   static async update(req, res, next) {
     try {
       const user = await User.findByPk(req.params.id);
       if (!user) throw new NotFoundError("User not found");
 
       const { avatar, firstName, lastName, studentId, faculty, study_year, isActive, roleIds } = req.body;
+
       await user.update({ avatar, firstName, lastName, studentId, faculty, study_year, isActive });
 
       if (roleIds !== undefined) {
-        const roles = await Role.findAll({ where: { id: roleIds } });
+        const roles = roleIds.length ? await Role.findAll({ where: { id: roleIds } }) : [];
         await user.setRoles(roles);
       }
 
@@ -112,7 +116,7 @@ class UserController {
         targetId: user.id,
         targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
         ipAddress: req.ip,
-        userAgent: req.get("user-agent")
+        userAgent: req.get("user-agent"),
       });
 
       const updated = await User.findByPk(user.id, {
@@ -125,7 +129,7 @@ class UserController {
     }
   }
 
-  // ── DELETE /api/users/:id  (soft delete) 
+  // ── DELETE /api/users/:id  (soft delete) ──────────────────────────────────
   static async delete(req, res, next) {
     try {
       if (Number(req.params.id) === Number(req.user.id)) {
@@ -144,7 +148,7 @@ class UserController {
         targetId: user.id,
         targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
         ipAddress: req.ip,
-        userAgent: req.get("user-agent")
+        userAgent: req.get("user-agent"),
       });
 
       Logger.info(`Soft-deleted user ${user.username} by admin ${req.user.id}`);
@@ -154,31 +158,69 @@ class UserController {
     }
   }
 
-  // ── POST /api/users/:id/roles 
+  // ── PATCH /api/users/:id/roles ──────────────────────────────────────────────
   static async assignRoles(req, res, next) {
     try {
-      const user = await User.findByPk(req.params.id);
+      const user = await User.findByPk(req.params.id, {
+        include: [{ association: "Roles", through: { attributes: [] } }],
+      });
       if (!user) throw new NotFoundError("User not found");
 
-      const roles = await Role.findAll({ where: { id: req.body.roleIds } });
-      await user.setRoles(roles);
+      const { roleIds = [] } = req.body;
 
-      return ResponseFormatter.success(res, null, "Roles assigned successfully");
+      const roles = roleIds.length ? await Role.findAll({ where: { id: roleIds } }) : [];
+      await user.addRoles(roles);
+
+      await logActivity({
+        userId: req.user.id,
+        action: "updated",
+        targetType: "user",
+        targetId: user.id,
+        targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        details: { roleIds },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+
+      const updated = await User.findByPk(user.id, {
+        include: [{ association: "Roles", through: { attributes: [] } }],
+      });
+
+      return ResponseFormatter.success(res, updated, "Roles assigned to user successfully");
     } catch (err) {
       next(err);
     }
   }
 
-  // ── POST /api/users/:id/permissions 
+  // ── PUT /api/users/:id/permissions ────────────────────────────────────────
   static async assignPermissions(req, res, next) {
     try {
-      const user = await User.findByPk(req.params.id);
+      const user = await User.findByPk(req.params.id, {
+        include: [{ association: "Permissions", through: { attributes: [] } }],
+      });
       if (!user) throw new NotFoundError("User not found");
 
-      const perms = await Permission.findAll({ where: { id: req.body.permissionIds } });
+      const { permissionIds = [] } = req.body;
+
+      const perms = permissionIds.length ? await Permission.findAll({ where: { id: permissionIds } }) : [];
       await user.setPermissions(perms);
 
-      return ResponseFormatter.success(res, null, "Permissions assigned successfully");
+      await logActivity({
+        userId: req.user.id,
+        action: "updated",
+        targetType: "user",
+        targetId: user.id,
+        targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        details: { permissionIds },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+
+      const updated = await User.findByPk(user.id, {
+        include: [{ association: "Permissions", through: { attributes: [] } }],
+      });
+
+      return ResponseFormatter.success(res, updated, "Permissions assigned to user successfully");
     } catch (err) {
       next(err);
     }

@@ -41,7 +41,7 @@ const userValidation = {
   ],
 };
 
-// Role validation rules
+// User admin validation rules
 const userRules = {
   create: [
     body("email").trim().isEmail().withMessage("valid email is required").normalizeEmail(),
@@ -68,7 +68,7 @@ const userRules = {
   assignRoles: [
     param("id").isInt({ min: 1 }).withMessage("valid user id is required"),
     body("roleIds").isArray({ min: 0 }).withMessage("roleIds must be an array"),
-      validate,
+    validate,
   ],
 
   assignPermissions: [
@@ -76,7 +76,35 @@ const userRules = {
     body("permissionIds").isArray({ min: 0 }).withMessage("permissionIds must be an array"),
     validate,
   ],
+
   assignRolePermissions: [
+    param("id").isInt({ min: 1 }).withMessage("valid role id is required"),
+    body("permissionIds").isArray({ min: 0 }).withMessage("permissionIds must be an array"),
+    validate,
+  ],
+};
+
+// Role CRUD validation rules
+const roleRules = {
+  create: [
+    body("name").trim().notEmpty().withMessage("role name is required"),
+    body("description").optional().trim(),
+    validate,
+  ],
+
+  update: [
+    param("id").isInt({ min: 1 }).withMessage("valid role id is required"),
+    body("name").optional().trim().notEmpty().withMessage("name cannot be empty"),
+    body("description").optional().trim(),
+    validate,
+  ],
+
+  id: [
+    param("id").isInt({ min: 1 }).withMessage("valid role id is required"),
+    validate,
+  ],
+
+  assignPermissions: [
     param("id").isInt({ min: 1 }).withMessage("valid role id is required"),
     body("permissionIds").isArray({ min: 0 }).withMessage("permissionIds must be an array"),
     validate,
@@ -100,6 +128,12 @@ const permissionRules = {
 
   id: [
     param("id").isInt({ min: 1 }).withMessage("valid permission id is required"),
+    validate,
+  ],
+
+  assignRoles: [
+    param("id").isInt({ min: 1 }).withMessage("valid permission id is required"),
+    body("roleIds").isArray({ min: 0 }).withMessage("roleIds must be an array"),
     validate,
   ],
 };
@@ -138,6 +172,7 @@ module.exports = {
   validate,
   userValidation,
   userRules,
+  roleRules,
   permissionRules,
   queryValidation,
   idValidation,
