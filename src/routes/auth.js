@@ -21,8 +21,9 @@ router.post('/login',           userValidation.login,    AuthController.login);
 router.post('/refresh',                                  AuthController.refresh);
 router.post('/logout',          authenticate,            AuthController.logout);
 router.get('/profile',          authenticate,            AuthController.getProfile);
-router.put('/profile',          authenticate,            AuthController.updateProfile);
+router.patch('/profile',          authenticate,            AuthController.updateProfile);
 router.post('/avatar',          authenticate, avatarUpload, AuthController.uploadAvatar);
-router.post('/change-password', authenticate,            AuthController.changePassword);
+router.put('/change-password', authenticate,            AuthController.changePassword);
+router.post('/forgot-password', AuthController.forgotPassword);
 
 module.exports = router;

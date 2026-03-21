@@ -70,6 +70,9 @@ class UserController {
       if (roleIds.length > 0) {
         const roles = await Role.findAll({ where: { id: roleIds } });
         await user.setRoles(roles);
+      } else {
+        const defaultRole = await Role.findOne({ where: { name: "user" } });
+        if (defaultRole) await user.addRole(defaultRole);
       }
 
       Logger.info(`Admin created user: ${username}`);

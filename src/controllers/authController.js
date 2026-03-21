@@ -37,8 +37,8 @@ class AuthController {
 
       const user = await User.create({ username, email, password, firstName, lastName, studentId });
 
-      const studentRole = await Role.findOne({ where: { name: 'student' } });
-      if (studentRole) await user.addRole(studentRole);
+      const defaultRole = await Role.findOne({ where: { name: 'user' } });
+      if (defaultRole) await user.addRole(defaultRole);
 
       return ResponseFormatter.success(res, {
         user: { id: user.id, username: user.username, email: user.email, studentId: user.studentId },
@@ -125,14 +125,14 @@ class AuthController {
     } catch (err) { next(err); }
   }
 
-  // PUT /api/auth/profile
+  // PATCH /api/auth/profile
   static async updateProfile(req, res, next) {
     try {
-      const { avatar, firstName, lastName, studentId } = req.body;
+      const { avatar, firstName, lastName, email, studentId } = req.body;
       const user = await User.findByPk(req.user.id);
       if (!user) throw new NotFoundError('User not found');
 
-      await user.update({ avatar, firstName, lastName, studentId });
+      await user.update({ avatar, firstName, lastName, email, studentId });
 
       return ResponseFormatter.success(res, {
         id: user.id, avatar: user.avatar, email: user.email,
@@ -168,6 +168,20 @@ class AuthController {
 
       await user.update({ password: newPassword });
       return ResponseFormatter.success(res, null, 'Password changed successfully');
+    } catch (err) { next(err); }
+  }
+
+  // POST /api/auth/forgot-password
+  static async forgotPassword(req, res, next) {
+    try {
+      const { email } = req.body;
+      const user = await User.findOne({ where: { email } });
+      if (!user) throw new NotFoundError('User not found');
+
+      const token = jwt.sign({ id: user.id }, process.env.FORGOT_PASSWORD_SECRET, { expiresIn: '1h' });
+      await user.update({ forgotPasswordToken: token, forgotPasswordTokenExpiry: Date.now() + 3600000 });
+
+      return ResponseFormatter.success(res, null, 'Forgot password link sent successfully');
     } catch (err) { next(err); }
   }
 }
