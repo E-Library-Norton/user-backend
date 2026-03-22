@@ -1,4 +1,5 @@
 // src/controllers/userController.js
+const { Op } = require("sequelize");
 const { User, Role, Permission } = require("../models");
 const ResponseFormatter = require("../utils/responseFormatter");
 const Logger = require("../utils/logger");
@@ -14,8 +15,25 @@ class UserController {
       const page = Math.max(parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE, 1);
       const limit = Math.min(parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT);
       const offset = (page - 1) * limit;
+      const search = req.query.search || '';
 
-      const { count, rows: users } = await User.findAndCountAll({
+      const where = { isDeleted: false };
+      if (search) {
+        where[Op.or] = [
+          { username: { [Op.iLike]: `%${search}%` } },
+          { email: { [Op.iLike]: `%${search}%` } },
+          { firstName: { [Op.iLike]: `%${search}%` } },
+          { lastName: { [Op.iLike]: `%${search}%` } },
+          { studentId: { [Op.iLike]: `%${search}%` } },
+        ];
+      }
+
+      // Count without JOIN to avoid row-inflation from multiple roles per user
+      const count = await User.count({ where });
+
+      // Fetch paginated users with roles
+      const users = await User.findAll({
+        where,
         include: [{ association: "Roles", through: { attributes: [] } }],
         limit,
         offset,
