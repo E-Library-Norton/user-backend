@@ -16,5 +16,6 @@ router.get(
 
 router.get("/popular", StatsController.getPopular);
 router.get("/recent", StatsController.getRecent);
+router.get("/public", StatsController.getPublicStats);
 
 module.exports = router;

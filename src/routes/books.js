@@ -3,17 +3,18 @@ const router             = require('express').Router();
 const BookController     = require('../controllers/bookController');
 const DownloadController = require('../controllers/downloadController');
 const { authenticate, authorize, authenticateStream } = require('../middleware/auth');
-const { uploadMulti }    = require('../middleware/upload');
+const { uploadMulti, uploadScan }    = require('../middleware/upload');
 
 // Public — anyone can browse
 router.get ('/',    BookController.getAll);
+router.post('/scan-search', uploadScan, BookController.scanSearch);
 router.get ('/:id', BookController.getById);
 
-// PDF streaming (token accepted via header OR ?token= query param)
-// GET  /:id/stream   → inline preview (use in <iframe> or PDF viewer)
-// GET  /:id/download → records download + streams as "Save As" attachment
-router.get('/:id/stream',   authenticateStream, DownloadController.streamPdf);
-router.get('/:id/download', authenticateStream, DownloadController.recordDownload);
+// PDF streaming:
+// GET  /:id/stream   → PUBLIC inline preview — no login needed to read
+// GET  /:id/download → REQUIRES login — records download + serves as attachment
+router.get('/:id/stream',   DownloadController.streamPdf);        // ← public
+router.get('/:id/download', authenticateStream, DownloadController.recordDownload); // ← auth
 
 // Admin stats for a book
 router.get('/:id/downloads', authenticate, authorize('admin', 'librarian'), BookController.getDownloads);

@@ -12,6 +12,7 @@ const app = express();
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:3001',
+  'http://localhost:3002',
   'https://elibrary-user.vercel.app',
   'https://elibrary-dashboard.vercel.app',
   'https://frontend-admin-dev.vercel.app',

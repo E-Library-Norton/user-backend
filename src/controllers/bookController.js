@@ -5,6 +5,7 @@ const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 const { logActivity } = require('../utils/activityLogger');
 const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
+const { scanBookCover, syncBookCover, deleteBookCover } = require('../utils/vectorSearchService');
 
 // ── Shared include for full book detail ───────────────────────────────────────
 const BOOK_INCLUDE = [
@@ -85,6 +86,74 @@ class BookController {
     } catch (err) { next(err); }
   }
 
+  // ── POST /api/books/scan-search
+  static async scanSearch(req, res, next) {
+    try {
+      const file =
+        req.files?.image?.[0] ??
+        req.files?.file?.[0] ??
+        req.files?.cover?.[0] ??
+        null;
+
+      if (!file) {
+        throw new ValidationError('Image file is required for scan search');
+      }
+
+      const rawLimit = Number(req.body?.limit ?? req.query?.limit ?? 5);
+      const safeLimit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 10) : 5;
+      const rawScoreThreshold = req.body?.scoreThreshold ?? req.query?.scoreThreshold;
+      const scoreThreshold =
+        rawScoreThreshold === undefined || rawScoreThreshold === ''
+          ? undefined
+          : Number(rawScoreThreshold);
+
+      const vectorResults = await scanBookCover(file, {
+        limit: safeLimit,
+        scoreThreshold: Number.isFinite(scoreThreshold) ? scoreThreshold : undefined,
+      });
+
+      const matches = Array.isArray(vectorResults.matches) ? vectorResults.matches : [];
+      const matchedIds = matches.map((match) => Number(match.book_id)).filter((id) => !Number.isNaN(id));
+
+      if (matchedIds.length === 0) {
+        return ResponseFormatter.success(res, {
+          matches: [],
+          total: 0,
+          source: 'vector-search',
+        });
+      }
+
+      const books = await Book.findAll({
+        where: {
+          id: { [Op.in]: matchedIds },
+          isDeleted: false,
+          isActive: true,
+        },
+        include: BOOK_INCLUDE,
+      });
+
+      const bookMap = new Map(books.map((book) => [Number(book.id), book]));
+      const orderedMatches = matches
+        .map((match) => {
+          const book = bookMap.get(Number(match.book_id));
+          if (!book) return null;
+
+          return {
+            ...book.toJSON(),
+            similarityScore: Number(match.score),
+            scanPayload: match.payload ?? {},
+          };
+        })
+        .filter(Boolean);
+
+      return ResponseFormatter.success(res, {
+        matches: orderedMatches,
+        total: orderedMatches.length,
+        source: 'vector-search',
+      });
+    } catch (err) { next(err); }
+  }
+
   // ── POST /api/books
   static async create(req, res, next) {
     try {
@@ -136,6 +205,8 @@ class BookController {
         where: { id: book.id },
         include: BOOK_INCLUDE,
       });
+
+      await syncBookCover(created);
 
       // Log activity
       logActivity({
@@ -208,6 +279,7 @@ class BookController {
       }
 
       const updated = await Book.findOne({ where: { id: book.id }, include: BOOK_INCLUDE });
+      await syncBookCover(updated);
       // Log activity
       logActivity({
         userId: req.user?.id,
@@ -226,6 +298,11 @@ class BookController {
     try {
       const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
       if (!book) throw new NotFoundError('Book not found');
+      try {
+        await deleteBookCover(book.id);
+      } catch {
+        // Deleting the vector should not block the primary record deletion.
+      }
       await book.update({ isDeleted: true, isActive: false });
 
       // Log activity

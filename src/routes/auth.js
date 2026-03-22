@@ -20,6 +20,7 @@ router.post('/register',        userValidation.register, AuthController.register
 router.post('/login',           userValidation.login,    AuthController.login);
 router.post('/refresh',                                  AuthController.refresh);
 router.post('/logout',          authenticate,            AuthController.logout);
+router.get('/me',               authenticate,            AuthController.getProfile);   // alias: current user
 router.get('/profile',          authenticate,            AuthController.getProfile);
 router.patch('/profile',          authenticate,            AuthController.updateProfile);
 router.post('/avatar',          authenticate, avatarUpload, AuthController.uploadAvatar);

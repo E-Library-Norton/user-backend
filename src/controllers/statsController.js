@@ -256,6 +256,23 @@ class StatsController {
         }
     }
 
+    static async getPublicStats(req, res, next) {
+        try {
+            const [totalBooks, totalMembers, totalCategories] = await Promise.all([
+                Book.count({ where: { isDeleted: false } }).catch(() => 0),
+                User.count({ where: { isDeleted: false } }).catch(() => 0),
+                Category.count().catch(() => 0),
+            ]);
+            return ResponseFormatter.success(res, {
+                total_books: totalBooks,
+                total_members: totalMembers,
+                total_categories: totalCategories,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     static async getPopular(req, res, next) {
         try {
             const { limit = 10 } = req.query;

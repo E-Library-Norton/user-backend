@@ -7,6 +7,7 @@ const fileFilter = (_req, file, cb) => {
     pdf:    [FILE_TYPES.PDF],
     avatar: FILE_TYPES.IMAGE,
     file:   [...FILE_TYPES.IMAGE, FILE_TYPES.PDF],
+    image:  FILE_TYPES.IMAGE,
   };
   const allowed = allowedTypes[file.fieldname];
   if (allowed && (Array.isArray(allowed) ? allowed.includes(file.mimetype) : allowed === file.mimetype)) {
@@ -31,5 +32,10 @@ module.exports = {
   uploadMulti: upload.fields([
     { name: 'cover', maxCount: 1 },
     { name: 'pdf',   maxCount: 1 },
+  ]),
+  uploadScan: upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'file',  maxCount: 1 },
+    { name: 'cover', maxCount: 1 },
   ]),
 };
