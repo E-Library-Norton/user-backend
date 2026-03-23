@@ -5,13 +5,15 @@ function createTransporter() {
     host:           process.env.EMAIL_HOST || 'smtp.gmail.com',
     port:           parseInt(process.env.EMAIL_PORT || '465'),
     secure:         process.env.EMAIL_PORT === '465' || process.env.EMAIL_SECURE === 'true',
+    // Render free-tier blocks IPv6 — force IPv4 so smtp.gmail.com resolves correctly
+    family:            4,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    connectionTimeout: 10000, // 10s — fail fast instead of hanging
-    greetingTimeout:   10000,
-    socketTimeout:     15000,
+    connectionTimeout: 120_000, // 2 min
+    greetingTimeout:   120_000,
+    socketTimeout:     120_000,
   });
 }
 
