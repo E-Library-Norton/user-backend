@@ -21,7 +21,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node --dns-result-order=ipv4first src/index.js",
+    "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "backfill:vectors": "node scripts/backfillBookVectors.js"
   },
@@ -40,7 +40,6 @@
     "nodemailer": "^8.0.1",
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
-    "resend": "^6.9.4",
     "sequelize": "^6.37.7",
     "socket.io": "^4.8.3",
     "streamifier": "^0.1.1"
