@@ -1,14 +1,19 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  host:   process.env.EMAIL_HOST   || 'smtp.gmail.com',
-  port:   parseInt(process.env.EMAIL_PORT || '587'),
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+function createTransporter() {
+  return nodemailer.createTransport({
+    host:           process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port:           parseInt(process.env.EMAIL_PORT || '465'),
+    secure:         process.env.EMAIL_PORT === '465' || process.env.EMAIL_SECURE === 'true',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    connectionTimeout: 10000, // 10s — fail fast instead of hanging
+    greetingTimeout:   10000,
+    socketTimeout:     15000,
+  });
+}
 
 /**
  * Send a 6-digit OTP code to the user's email for password reset.
@@ -19,7 +24,7 @@ const transporter = nodemailer.createTransport({
 async function sendOtpEmail(to, otp, firstName = 'Student') {
   const name = firstName || 'Student';
 
-  await transporter.sendMail({
+  await createTransporter().sendMail({
     from: `"E-Library NU" <${process.env.EMAIL_USER}>`,
     to,
     subject: `${otp} — Your E-Library NU password reset code`,
@@ -102,7 +107,7 @@ async function sendOtpEmail(to, otp, firstName = 'Student') {
 async function sendPasswordResetEmail(to, resetLink, firstName = 'Student') {
   const name = firstName || 'Student';
 
-  await transporter.sendMail({
+  await createTransporter().sendMail({
     from: `"E-Library NU" <${process.env.EMAIL_USER}>`,
     to,
     subject: 'Reset your E-Library NU password',
