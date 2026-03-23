@@ -1,10 +1,19 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
-// Uses Resend HTTP API (port 443) — works on Render free tier.
-// SMTP ports 465/587 are blocked by Render's Singapore datacenter.
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const FROM_ADDRESS = process.env.EMAIL_FROM || 'E-Library NU <onboarding@resend.dev>';
+function createTransporter() {
+  return nodemailer.createTransport({
+    host:   'smtp.gmail.com',
+    port:   465,
+    secure: true, // SSL
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout:   10000,
+    socketTimeout:     15000,
+  });
+}
 
 /**
  * Send a 6-digit OTP code to the user's email for password reset.
@@ -12,8 +21,8 @@ const FROM_ADDRESS = process.env.EMAIL_FROM || 'E-Library NU <onboarding@resend.
 async function sendOtpEmail(to, otp, firstName = 'Student') {
   const name = firstName || 'Student';
 
-  await resend.emails.send({
-    from: FROM_ADDRESS,
+  await createTransporter().sendMail({
+    from: `"E-Library NU" <${process.env.EMAIL_USER}>`,
     to,
     subject: `${otp} — Your E-Library NU password reset code`,
     html: `
@@ -95,8 +104,8 @@ async function sendOtpEmail(to, otp, firstName = 'Student') {
 async function sendPasswordResetEmail(to, resetLink, firstName = 'Student') {
   const name = firstName || 'Student';
 
-  await resend.emails.send({
-    from: FROM_ADDRESS,
+  await createTransporter().sendMail({
+    from: `"E-Library NU" <${process.env.EMAIL_USER}>`,
     to,
     subject: 'Reset your E-Library NU password',
     html: `
