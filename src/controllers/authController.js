@@ -5,6 +5,7 @@ const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, AuthenticationError, NotFoundError } = require('../utils/errors');
 const { logActivity }   = require('../utils/activityLogger');
 const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
+const { sendOtpEmail } = require('../utils/emailService');
 
 class AuthController {
 
@@ -172,16 +173,108 @@ class AuthController {
   }
 
   // POST /api/auth/forgot-password
+  // Step 1: generate 6-digit OTP, embed in signed JWT (sessionToken), send OTP to email.
   static async forgotPassword(req, res, next) {
     try {
       const { email } = req.body;
-      const user = await User.findOne({ where: { email } });
+      if (!email) throw new ValidationError('Email is required');
+
+      const user = await User.scope(null).findOne({
+        where: { email, isDeleted: false },
+        attributes: ['id', 'email', 'firstName', 'password'],
+      });
+
+      // Always return 200 — prevents email enumeration
+      if (!user) {
+        return ResponseFormatter.success(res, { sessionToken: null }, 'If that email is registered, a code has been sent');
+      }
+
+      // 6-digit OTP
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+
+      // Store OTP inside a JWT signed with SECRET+password_hash (auto-invalidates after password change)
+      const sessionToken = jwt.sign(
+        { id: user.id, otp },
+        process.env.FORGOT_PASSWORD_SECRET + user.password,
+        { expiresIn: '10m' }
+      );
+
+      await sendOtpEmail(user.email, otp, user.firstName);
+
+      // Return sessionToken to frontend so it can send it back during OTP verification
+      return ResponseFormatter.success(res, { sessionToken }, 'A 6-digit code has been sent to your email');
+    } catch (err) { next(err); }
+  }
+
+  // POST /api/auth/verify-otp
+  // Step 2: verify the 6-digit code. Returns a short-lived resetToken if correct.
+  static async verifyOtp(req, res, next) {
+    try {
+      const { sessionToken, otp } = req.body;
+      if (!sessionToken) throw new ValidationError('Session token is required');
+      if (!otp)          throw new ValidationError('Code is required');
+
+      // Decode (unverified) to get user ID
+      const decoded = jwt.decode(sessionToken);
+      if (!decoded?.id) throw new AuthenticationError('Invalid session. Please request a new code');
+
+      const user = await User.scope(null).findOne({
+        where: { id: decoded.id, isDeleted: false },
+        attributes: ['id', 'password'],
+      });
       if (!user) throw new NotFoundError('User not found');
 
-      const token = jwt.sign({ id: user.id }, process.env.FORGOT_PASSWORD_SECRET, { expiresIn: '1h' });
-      await user.update({ forgotPasswordToken: token, forgotPasswordTokenExpiry: Date.now() + 3600000 });
+      // Verify signature + expiry
+      let payload;
+      try {
+        payload = jwt.verify(sessionToken, process.env.FORGOT_PASSWORD_SECRET + user.password);
+      } catch {
+        throw new AuthenticationError('Code has expired or is invalid. Please request a new one');
+      }
 
-      return ResponseFormatter.success(res, null, 'Forgot password link sent successfully');
+      if (String(payload.otp) !== String(otp)) {
+        throw new AuthenticationError('Incorrect code. Please try again');
+      }
+
+      // Issue a short-lived resetToken (15 min)
+      const resetToken = jwt.sign(
+        { id: user.id },
+        process.env.FORGOT_PASSWORD_SECRET + user.password + '_reset',
+        { expiresIn: '15m' }
+      );
+
+      return ResponseFormatter.success(res, { resetToken }, 'Code verified successfully');
+    } catch (err) { next(err); }
+  }
+
+  // POST /api/auth/reset-password
+  // Step 3: set the new password using the resetToken from step 2.
+  static async resetPassword(req, res, next) {
+    try {
+      const { resetToken, password, confirmPassword } = req.body;
+      if (!resetToken) throw new ValidationError('Reset token is required');
+      if (!password)   throw new ValidationError('New password is required');
+      if (password !== confirmPassword) throw new ValidationError('Passwords do not match');
+      if (password.length < 6) throw new ValidationError('Password must be at least 6 characters');
+
+      const decoded = jwt.decode(resetToken);
+      if (!decoded?.id) throw new AuthenticationError('Invalid reset token');
+
+      const user = await User.scope(null).findOne({
+        where: { id: decoded.id, isDeleted: false },
+        attributes: ['id', 'password'],
+      });
+      if (!user) throw new NotFoundError('User not found');
+
+      try {
+        jwt.verify(resetToken, process.env.FORGOT_PASSWORD_SECRET + user.password + '_reset');
+      } catch {
+        throw new AuthenticationError('Reset session expired. Please start over');
+      }
+
+      await user.update({ password });
+
+      return ResponseFormatter.success(res, null, 'Password reset successfully. You can now sign in.');
     } catch (err) { next(err); }
   }
 }
