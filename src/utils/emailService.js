@@ -11,13 +11,14 @@ function createTransporter() {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: 587,
     secure: false, 
+    family: 4, // force IPv4
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    connectionTimeout: 60_000, 
-    greetingTimeout:   60_000,
-    socketTimeout:     60_000,
+    connectionTimeout: 120000, 
+    greetingTimeout:   120000,
+    socketTimeout:     120000,
   });
 }
 
