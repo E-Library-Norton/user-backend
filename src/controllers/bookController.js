@@ -1,6 +1,6 @@
 // controllers/book.controller.js
 const { Op } = require('sequelize');
-const { Book, Author, Category, Publisher, MaterialType, Department, Download } = require('../models');
+const { Book, Author, Editor, Category, Publisher, MaterialType, Department, Download } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 const { logActivity } = require('../utils/activityLogger');
@@ -17,6 +17,16 @@ const BOOK_INCLUDE = [
     model: Author, as: 'Authors',
     attributes: ['id', 'name', 'nameKh'],
     through: { attributes: ['isPrimaryAuthor'] },
+  },
+  {
+    model: Editor, as: 'Editors',
+    attributes: ['id', 'name', 'nameKh'],
+    through: { attributes: [] },
+  },
+  {
+    model: Publisher, as: 'Publishers',
+    attributes: ['id', 'name', 'nameKh'],
+    through: { attributes: [] },
   },
 ];
 
@@ -161,7 +171,10 @@ class BookController {
         title, titleKh, isbn, publicationYear, description,
         pages,
         categoryId, publisherId, departmentId, typeId,
-        authorIds = [],   // [{ id, isPrimaryAuthor }] or [id, id]
+        authorIds = [],   // legacy: [{ id, isPrimaryAuthor }] or [id, id]
+        authorNames,      // preferred: ["David", "Samnang"] — find-or-create by name
+        editorNames,      // ["Editor Name"] — find-or-create by name
+        publisherNames,   // ["Publisher Name"] — find-or-create by name
         isActive = true,
       } = req.body;
 
@@ -189,8 +202,25 @@ class BookController {
         categoryId, publisherId, departmentId, typeId, isActive,
       });
 
-      // Attach authors
-      if (parsedAuthorIds.length > 0) {
+      // Parse authorNames (find-or-create by name)
+      let parsedAuthorNames = authorNames;
+      if (typeof authorNames === 'string') {
+        try { parsedAuthorNames = JSON.parse(authorNames); } catch { parsedAuthorNames = []; }
+      }
+      if (!Array.isArray(parsedAuthorNames)) parsedAuthorNames = [];
+
+      // Attach authors — prefer authorNames (find-or-create) over legacy authorIds
+      if (parsedAuthorNames.length > 0) {
+        for (let i = 0; i < parsedAuthorNames.length; i++) {
+          const trimmed = String(parsedAuthorNames[i] ?? '').trim();
+          if (!trimmed) continue;
+          const [author] = await Author.findOrCreate({
+            where: { name: trimmed },
+            defaults: { name: trimmed },
+          });
+          await book.addAuthor(author.id, { through: { isPrimaryAuthor: i === 0 } });
+        }
+      } else if (parsedAuthorIds.length > 0) {
         const pairs = parsedAuthorIds.map((a) =>
           typeof a === 'object'
             ? { author_id: a.id, is_primary_author: a.isPrimaryAuthor ?? false }
@@ -200,6 +230,41 @@ class BookController {
           book.addAuthor(p.author_id, { through: { isPrimaryAuthor: p.is_primary_author } })
         ));
       }
+
+      // Attach editors — find-or-create by name
+      let parsedEditorNames = editorNames;
+      if (typeof editorNames === 'string') {
+        try { parsedEditorNames = JSON.parse(editorNames); } catch { parsedEditorNames = []; }
+      }
+      if (!Array.isArray(parsedEditorNames)) parsedEditorNames = [];
+      for (const raw of parsedEditorNames) {
+        const trimmed = String(raw ?? '').trim();
+        if (!trimmed) continue;
+        const [editor] = await Editor.findOrCreate({
+          where: { name: trimmed },
+          defaults: { name: trimmed },
+        });
+        await book.addEditor(editor.id);
+      }
+
+      // Attach publishers — find-or-create by name
+      let parsedPublisherNames = publisherNames;
+      if (typeof publisherNames === 'string') {
+        try { parsedPublisherNames = JSON.parse(publisherNames); } catch { parsedPublisherNames = []; }
+      }
+      if (!Array.isArray(parsedPublisherNames)) parsedPublisherNames = [];
+      let firstPublisherId = null;
+      for (const raw of parsedPublisherNames) {
+        const trimmed = String(raw ?? '').trim();
+        if (!trimmed) continue;
+        const [publisher] = await Publisher.findOrCreate({
+          where: { name: trimmed },
+          defaults: { name: trimmed },
+        });
+        await book.addPublisher(publisher.id);
+        if (!firstPublisherId) firstPublisherId = publisher.id;
+      }
+      if (firstPublisherId) await book.update({ publisherId: firstPublisherId });
 
       const created = await Book.findOne({
         where: { id: book.id },
@@ -231,7 +296,11 @@ class BookController {
         title, titleKh, isbn, publicationYear, description,
         pages,
         categoryId, publisherId, departmentId, typeId,
-        authorIds, isActive,
+        authorIds,   // legacy
+        authorNames, // preferred: ["David", "Samnang"] — find-or-create by name
+        editorNames, // ["Editor Name"] — find-or-create by name
+        publisherNames, // ["Publisher Name"] — find-or-create by name
+        isActive,
       } = req.body;
 
       // Check ISBN uniqueness (exclude self)
@@ -266,8 +335,26 @@ class BookController {
         ...(isActive !== undefined && { isActive }),
       });
 
-      // Replace authors if provided
-      if (parsedAuthorIds !== undefined) {
+      // Parse authorNames for update
+      let parsedAuthorNames = authorNames;
+      if (typeof authorNames === 'string') {
+        try { parsedAuthorNames = JSON.parse(authorNames); } catch { parsedAuthorNames = undefined; }
+      }
+
+      // Replace authors — prefer authorNames (find-or-create) over legacy authorIds
+      if (Array.isArray(parsedAuthorNames)) {
+        await book.setAuthors([]); // clear existing
+        for (let i = 0; i < parsedAuthorNames.length; i++) {
+          const trimmed = String(parsedAuthorNames[i] ?? '').trim();
+          if (!trimmed) continue;
+          const [author] = await Author.findOrCreate({
+            where: { name: trimmed },
+            defaults: { name: trimmed },
+          });
+          await book.addAuthor(author.id, { through: { isPrimaryAuthor: i === 0 } });
+        }
+      } else if (parsedAuthorIds !== undefined) {
+        // Legacy authorIds path
         await book.setAuthors([]); // clear
         if (parsedAuthorIds.length > 0) {
           await Promise.all(parsedAuthorIds.map((a) => {
@@ -276,6 +363,45 @@ class BookController {
             return book.addAuthor(id, { through: { isPrimaryAuthor: isPrimary } });
           }));
         }
+      }
+
+      // Replace editors — find-or-create by name
+      let parsedEditorNames = editorNames;
+      if (typeof editorNames === 'string') {
+        try { parsedEditorNames = JSON.parse(editorNames); } catch { parsedEditorNames = undefined; }
+      }
+      if (Array.isArray(parsedEditorNames)) {
+        await book.setEditors([]); // clear existing
+        for (const raw of parsedEditorNames) {
+          const trimmed = String(raw ?? '').trim();
+          if (!trimmed) continue;
+          const [editor] = await Editor.findOrCreate({
+            where: { name: trimmed },
+            defaults: { name: trimmed },
+          });
+          await book.addEditor(editor.id);
+        }
+      }
+
+      // Replace publishers — find-or-create by name
+      let parsedPublisherNames = publisherNames;
+      if (typeof publisherNames === 'string') {
+        try { parsedPublisherNames = JSON.parse(publisherNames); } catch { parsedPublisherNames = undefined; }
+      }
+      if (Array.isArray(parsedPublisherNames)) {
+        await book.setPublishers([]);
+        let firstPublisherId = null;
+        for (const raw of parsedPublisherNames) {
+          const trimmed = String(raw ?? '').trim();
+          if (!trimmed) continue;
+          const [publisher] = await Publisher.findOrCreate({
+            where: { name: trimmed },
+            defaults: { name: trimmed },
+          });
+          await book.addPublisher(publisher.id);
+          if (!firstPublisherId) firstPublisherId = publisher.id;
+        }
+        if (firstPublisherId) await book.update({ publisherId: firstPublisherId });
       }
 
       const updated = await Book.findOne({ where: { id: book.id }, include: BOOK_INCLUDE });

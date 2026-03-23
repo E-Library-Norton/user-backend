@@ -15,6 +15,7 @@ const uploadRoute = require('./uploads');
 const bookRoutes = require('./books');
 const categoriesRoutes = require('./categories');
 const authorRoutes = require('./authors');
+const editorRoutes = require('./editors');
 const publisherRoutes = require('./publishers');
 const materialTypeRoutes = require('./materialTypes');
 const departmentRoutes = require('./departments');
@@ -38,6 +39,7 @@ router.use('/uploads', uploadRoute)
 router.use('/books', bookRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/authors', authorRoutes);
+router.use('/editors', editorRoutes);
 router.use('/publishers', publisherRoutes);
 router.use('/material-types', materialTypeRoutes);
 router.use('/departments', departmentRoutes);

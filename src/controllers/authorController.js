@@ -1,8 +1,8 @@
 // controllers/author.controller.js
-const { Op } = require('sequelize');
+const { Op, UniqueConstraintError } = require('sequelize');
 const { Author, Book } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
-const { ValidationError, NotFoundError } = require('../utils/errors');
+const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 const { logActivity } = require('../utils/activityLogger');
 
 class AuthorController {
@@ -42,7 +42,9 @@ class AuthorController {
     try {
       const { name, nameKh, biography, website } = req.body;
       if (!name) throw new ValidationError('Name is required');
-      const author = await Author.create({ name, nameKh, biography, website });
+      const existing = await Author.findOne({ where: { name: name.trim() } });
+      if (existing) throw new ConflictError(`Author "${name.trim()}" already exists`);
+      const author = await Author.create({ name: name.trim(), nameKh, biography, website });
 
       await logActivity({
         userId: req.user.id,
@@ -64,7 +66,11 @@ class AuthorController {
       const author = await Author.findByPk(req.params.id);
       if (!author) throw new NotFoundError('Author not found');
       const { name, nameKh, biography, website } = req.body;
-      await author.update({ ...(name !== undefined && { name }), ...(nameKh !== undefined && { nameKh }), ...(biography !== undefined && { biography }), ...(website !== undefined && { website }) });
+      if (name !== undefined) {
+        const existing = await Author.findOne({ where: { name: name.trim(), id: { [Op.ne]: req.params.id } } });
+        if (existing) throw new ConflictError(`Author "${name.trim()}" already exists`);
+      }
+      await author.update({ ...(name !== undefined && { name: name.trim() }), ...(nameKh !== undefined && { nameKh }), ...(biography !== undefined && { biography }), ...(website !== undefined && { website }) });
 
       await logActivity({
         userId: req.user.id,

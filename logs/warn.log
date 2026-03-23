@@ -3,3 +3,9 @@
 {"timestamp":"2026-03-22T07:19:19.844Z","level":"WARN","message":"fetch failed","bookId":"3","status":null}
 {"timestamp":"2026-03-22T07:19:19.846Z","level":"WARN","message":"fetch failed","bookId":"4","status":null}
 {"timestamp":"2026-03-22T07:19:19.848Z","level":"WARN","message":"fetch failed","bookId":"5","status":null}
+{"timestamp":"2026-03-23T13:10:46.412Z","level":"WARN","message":"fetch failed","bookId":"12","status":null}
+{"timestamp":"2026-03-23T13:11:45.413Z","level":"WARN","message":"fetch failed","bookId":"12","status":null}
+{"timestamp":"2026-03-23T13:13:53.329Z","level":"WARN","message":"fetch failed","bookId":"11","status":null}
+{"timestamp":"2026-03-23T15:53:56.474Z","level":"WARN","message":"fetch failed","bookId":"4","status":null}
+{"timestamp":"2026-03-23T16:06:31.179Z","level":"WARN","message":"fetch failed","bookId":"3","status":null}
+{"timestamp":"2026-03-23T16:13:02.251Z","level":"WARN","message":"fetch failed","bookId":"13","status":null}

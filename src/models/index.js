@@ -8,6 +8,7 @@ const Role = require('./Role');
 const Permission = require('./Permission');
 const Book = require('./Book');
 const Author = require('./Author');
+const Editor = require('./Editor');
 const Category = require('./Category');
 const Publisher = require('./Publisher');
 const MaterialType = require('./MaterialType');
@@ -42,6 +43,11 @@ const BookAuthor = sequelize.define('BookAuthor', {
   },
 }, { tableName: 'books_authors', timestamps: false });
 
+const BookEditor = sequelize.define('BookEditor', {
+  book_id:   { type: DataTypes.BIGINT, primaryKey: true },
+  editor_id: { type: DataTypes.BIGINT, primaryKey: true },
+}, { tableName: 'books_editors', timestamps: false });
+
 const PublishersBooks = sequelize.define('PublishersBooks', {
   publisher_id: { type: DataTypes.BIGINT, primaryKey: true },
   book_id: { type: DataTypes.BIGINT, primaryKey: true },
@@ -74,6 +80,10 @@ MaterialType.hasMany(Book, { foreignKey: 'type_id', as: 'Books' });
 Book.belongsToMany(Author, { through: BookAuthor, foreignKey: 'book_id', otherKey: 'author_id', as: 'Authors' });
 Author.belongsToMany(Book, { through: BookAuthor, foreignKey: 'author_id', otherKey: 'book_id', as: 'Books' });
 
+// Book ↔ Editor
+Book.belongsToMany(Editor, { through: BookEditor, foreignKey: 'book_id', otherKey: 'editor_id', as: 'Editors' });
+Editor.belongsToMany(Book, { through: BookEditor, foreignKey: 'editor_id', otherKey: 'book_id', as: 'Books' });
+
 // Book ↔ Publisher (publishers_books)
 Book.belongsToMany(Publisher, { through: PublishersBooks, foreignKey: 'book_id', otherKey: 'publisher_id', as: 'Publishers' });
 Publisher.belongsToMany(Book, { through: PublishersBooks, foreignKey: 'publisher_id', otherKey: 'book_id', as: 'PublishedBooks' });
@@ -92,6 +102,6 @@ User.hasMany(Activity, { foreignKey: 'user_id', as: 'Activities' });
 module.exports = {
   sequelize,
   User, Role, Permission, Setting, Activity,
-  Book, Author, Category, Publisher, MaterialType, Department, Download,
-  BookAuthor,
+  Book, Author, Editor, Category, Publisher, MaterialType, Department, Download,
+  BookAuthor, BookEditor,
 };
