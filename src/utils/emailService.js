@@ -1,37 +1,19 @@
-const nodemailer = require('nodemailer');
-const dns         = require('dns');
+const { Resend } = require('resend');
 
-// Render free-tier blocks outbound IPv6 (ENETUNREACH on IPv6 addresses).
-// Force the Node.js DNS resolver to return IPv4 results first so
-// nodemailer never even tries an IPv6 connection to smtp.gmail.com.
-dns.setDefaultResultOrder('ipv4first');
+// Uses Resend HTTP API (port 443) — works on Render free tier.
+// SMTP ports 465/587 are blocked by Render's Singapore datacenter.
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-function createTransporter() {
-  return nodemailer.createTransport({
-    host:   process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port:   465,
-    secure: true,  // SSL — avoids STARTTLS ENETUNREACH on Render
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    connectionTimeout: 30000,
-    greetingTimeout:   30000,
-    socketTimeout:     30000,
-  });
-}
+const FROM_ADDRESS = process.env.EMAIL_FROM || 'E-Library NU <onboarding@resend.dev>';
 
 /**
  * Send a 6-digit OTP code to the user's email for password reset.
- * @param {string} to        - recipient email
- * @param {string} otp       - 6-digit code
- * @param {string} firstName - user first name
  */
 async function sendOtpEmail(to, otp, firstName = 'Student') {
   const name = firstName || 'Student';
 
-  await createTransporter().sendMail({
-    from: `"E-Library NU" <${process.env.EMAIL_USER}>`,
+  await resend.emails.send({
+    from: FROM_ADDRESS,
     to,
     subject: `${otp} — Your E-Library NU password reset code`,
     html: `
@@ -52,7 +34,7 @@ async function sendOtpEmail(to, otp, firstName = 'Student') {
           <tr>
             <td style="background:linear-gradient(135deg,#20659C,#0d3a61);padding:32px 40px;text-align:center;">
               <span style="color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.3px;">
-                📚 E-Library<span style="color:#DF900A;">NU</span>
+                📚 E-Library <span style="color:#DF900A;">NU</span>
               </span>
             </td>
           </tr>
@@ -100,7 +82,7 @@ async function sendOtpEmail(to, otp, firstName = 'Student') {
 </body>
 </html>
     `,
-    text: `Hi ${name},\n\nYour E-Library NU password reset code is: ${otp}\n\nIt expires in 10 minutes. Do not share it.\n\nIf you did not request this, ignore this email.`,
+    text: `Hi ${name},\n\nYour E-Library NU password reset code is: ${otp}\n\nIt expires in 1 minute. Do not share it.\n\nIf you did not request this, ignore this email.`,
   });
 }
 
@@ -113,8 +95,8 @@ async function sendOtpEmail(to, otp, firstName = 'Student') {
 async function sendPasswordResetEmail(to, resetLink, firstName = 'Student') {
   const name = firstName || 'Student';
 
-  await createTransporter().sendMail({
-    from: `"E-Library NU" <${process.env.EMAIL_USER}>`,
+  await resend.emails.send({
+    from: FROM_ADDRESS,
     to,
     subject: 'Reset your E-Library NU password',
     html: `
