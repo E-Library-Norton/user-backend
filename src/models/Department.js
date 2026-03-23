@@ -6,22 +6,26 @@ const Department = sequelize.define(
   "Department",
   {
     id: {
-      type:          DataTypes.INTEGER,
-      primaryKey:    true,
+      type: DataTypes.INTEGER,
+      primaryKey: true,
       autoIncrement: true,
-    },
-    name: {
-      type:      DataTypes.STRING(255),
-      allowNull: false,
-    },
-    nameKh: {
-      type:  DataTypes.STRING(255),
-      field: 'name_kh',
     },
     code: {
       type: DataTypes.STRING(50),
       allowNull: false,
       unique: true,
+    },
+    name: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    nameKh: {
+      type: DataTypes.STRING(255),
+      field: 'name_kh',
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
   },
   {

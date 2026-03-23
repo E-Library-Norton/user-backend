@@ -23,9 +23,9 @@ class MaterialTypeController {
 
   static async create(req, res, next) {
     try {
-      const { name, nameKh } = req.body;
+      const { name, nameKh, description } = req.body;
       if (!name) throw new ValidationError('Name is required');
-      const type = await MaterialType.create({ name, nameKh });
+      const type = await MaterialType.create({ name, nameKh, description });
 
       await logActivity({
         userId: req.user.id,
@@ -45,8 +45,12 @@ class MaterialTypeController {
     try {
       const type = await MaterialType.findByPk(req.params.id);
       if (!type) throw new NotFoundError('Material type not found');
-      const { name, nameKh } = req.body;
-      await type.update({ ...(name !== undefined && { name }), ...(nameKh !== undefined && { nameKh }) });
+      const { name, nameKh, description } = req.body;
+      await type.update({
+        ...(name        !== undefined && { name }),
+        ...(nameKh      !== undefined && { nameKh }),
+        ...(description !== undefined && { description }),
+      });
 
       await logActivity({
         userId: req.user.id,

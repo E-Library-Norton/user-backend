@@ -27,13 +27,13 @@ class DepartmentController {
 
   static async create(req, res, next) {
     try {
-      const { name, nameKh, code } = req.body;
+      const { name, nameKh, code, description } = req.body;
       if (!name) throw new ValidationError('Name is required');
       if (code) {
         const exists = await Department.findOne({ where: { code } });
         if (exists) throw new ConflictError(`Department ${code} already exists`);
       }
-      const dept = await Department.create({ name, nameKh, code });
+      const dept = await Department.create({ name, nameKh, code, description });
 
       await logActivity({
         userId: req.user.id,
@@ -53,15 +53,16 @@ class DepartmentController {
     try {
       const dept = await Department.findByPk(req.params.id);
       if (!dept) throw new NotFoundError('Department not found');
-      const { name, nameKh, code } = req.body;
+      const { name, nameKh, code, description } = req.body;
       if (code && code !== dept.code) {
         const exists = await Department.findOne({ where: { code } });
         if (exists) throw new ConflictError(`Department ${code} already exists`);
       }
       await dept.update({
-        ...(name !== undefined && { name }),
-        ...(nameKh !== undefined && { nameKh }),
-        ...(code !== undefined && { code }),
+        ...(name        !== undefined && { name }),
+        ...(nameKh      !== undefined && { nameKh }),
+        ...(code        !== undefined && { code }),
+        ...(description !== undefined && { description }),
       });
 
       await logActivity({

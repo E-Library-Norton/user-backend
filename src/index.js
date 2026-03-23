@@ -70,7 +70,7 @@ async function connectWithRetry(retries = 5, delayMs = 3000) {
     try {
       await sequelize.authenticate();
       console.log("Database connected successfully!");
-      await sequelize.sync();
+      await sequelize.sync({ alter: true });
       app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
       return;
     } catch (err) {

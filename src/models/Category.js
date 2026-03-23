@@ -22,6 +22,10 @@ const Category = sequelize.define(
       type: DataTypes.STRING(255),
       field: "name_kh",
     },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     tableName: "categories",
