@@ -1,19 +1,23 @@
 const nodemailer = require('nodemailer');
+const dns         = require('dns');
+
+// Render free-tier blocks outbound IPv6 (ENETUNREACH on IPv6 addresses).
+// Force the Node.js DNS resolver to return IPv4 results first so
+// nodemailer never even tries an IPv6 connection to smtp.gmail.com.
+dns.setDefaultResultOrder('ipv4first');
 
 function createTransporter() {
   return nodemailer.createTransport({
-    host:           process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port:           parseInt(process.env.EMAIL_PORT || '465'),
-    secure:         process.env.EMAIL_PORT === '465' || process.env.EMAIL_SECURE === 'true',
-    // Render free-tier blocks IPv6 — force IPv4 so smtp.gmail.com resolves correctly
-    family:            4,
+    host:   process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port:   parseInt(process.env.EMAIL_PORT || '465'),
+    secure: process.env.EMAIL_PORT === '465' || process.env.EMAIL_SECURE === 'true',
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    connectionTimeout: 120_000, // 2 min
-    greetingTimeout:   120_000,
-    socketTimeout:     120_000,
+    connectionTimeout: 60_000, 
+    greetingTimeout:   60_000,
+    socketTimeout:     60_000,
   });
 }
 
@@ -70,7 +74,7 @@ async function sendOtpEmail(to, otp, firstName = 'Student') {
               <!-- Expiry notice -->
               <div style="background:#FFF8EC;border:1px solid #F5D98B;border-radius:8px;padding:12px 20px;margin-bottom:24px;">
                 <p style="margin:0;font-size:13px;color:#92620A;">
-                  ⏰ This code expires in <strong>1 minutes</strong>. Do not share it with anyone.
+                  ⏰ This code expires in <strong>1 minute</strong>. Do not share it with anyone.
                 </p>
               </div>
 
