@@ -8,17 +8,16 @@ dns.setDefaultResultOrder('ipv4first');
 
 function createTransporter() {
   return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: 587,
-    secure: false, 
-    family: 4, // force IPv4
+    host:   process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port:   465,
+    secure: true,  // SSL — avoids STARTTLS ENETUNREACH on Render
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    connectionTimeout: 120000, 
-    greetingTimeout:   120000,
-    socketTimeout:     120000,
+    connectionTimeout: 30000,
+    greetingTimeout:   30000,
+    socketTimeout:     30000,
   });
 }
 
