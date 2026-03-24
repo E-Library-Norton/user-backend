@@ -4,8 +4,11 @@ const { User, Role }    = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, AuthenticationError, NotFoundError } = require('../utils/errors');
 const { logActivity }   = require('../utils/activityLogger');
-const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
+const { uploadToCloudinary, extractKeyFromUrl } = require('../utils/cloudinaryUpload');
 const { sendOtpEmail } = require('../utils/emailService');
+const r2 = require('../config/r2');
+const { GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 class AuthController {
 
@@ -154,6 +157,35 @@ class AuthController {
       await user.update({ avatar: result.secure_url });
 
       return ResponseFormatter.success(res, { avatar: result.secure_url }, 'Avatar updated successfully');
+    } catch (err) { next(err); }
+  }
+
+  // GET /api/auth/avatar
+  static async getAvatar(req, res, next) {
+    try {
+      const user = await User.findByPk(req.user.id, { attributes: ['id', 'avatar'] });
+      if (!user) throw new NotFoundError('User not found');
+      if (!user.avatar) throw new NotFoundError('Avatar not found');
+
+      const key = extractKeyFromUrl(user.avatar);
+
+      // If avatar URL is not an R2-managed URL (legacy external URL), redirect directly.
+      if (!key) {
+        res.set('Cache-Control', 'private, max-age=300');
+        return res.redirect(302, user.avatar);
+      }
+
+      const signedUrl = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+          Bucket: process.env.R2_BUCKET,
+          Key: key,
+        }),
+        { expiresIn: 3600 }
+      );
+
+      res.set('Cache-Control', 'private, max-age=300');
+      return res.redirect(302, signedUrl);
     } catch (err) { next(err); }
   }
 

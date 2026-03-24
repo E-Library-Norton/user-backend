@@ -22,6 +22,7 @@ router.post('/refresh',                                  AuthController.refresh)
 router.post('/logout',          authenticate,            AuthController.logout);
 router.get('/me',               authenticate,            AuthController.getProfile);   // alias: current user
 router.get('/profile',          authenticate,            AuthController.getProfile);
+router.get('/avatar',           authenticate,            AuthController.getAvatar);
 router.patch('/profile',          authenticate,            AuthController.updateProfile);
 router.post('/avatar',          authenticate, avatarUpload, AuthController.uploadAvatar);
 router.put('/change-password', authenticate,            AuthController.changePassword);
