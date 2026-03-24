@@ -3,34 +3,30 @@ const https                    = require('https');
 const http                     = require('http');
 const { Op }                   = require('sequelize');
 const { Download, Book, User } = require('../models');
-const cloudinary               = require('../config/cloudinary');
+const { GetObjectCommand }     = require('@aws-sdk/client-s3');
+const { getSignedUrl }         = require('@aws-sdk/s3-request-presigner');
+const r2                       = require('../config/r2');
+const { extractKeyFromUrl }    = require('../utils/cloudinaryUpload');
 const ResponseFormatter        = require('../utils/responseFormatter');
 const { NotFoundError }        = require('../utils/errors');
+
+const BUCKET = process.env.R2_BUCKET;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-
-function extractPublicId(secureUrl) {
-  if (!secureUrl) return null;
-  // Remove everything up to and including "/upload/" (and optional version segment)
-  const match = secureUrl.match(/\/upload\/(?:v\d+\/)?(.+)$/);
-  return match ? match[1] : null;
-}
-
 /**
- * Generate a time-limited Cloudinary signed URL.
- * This works even when the Cloudinary account has strict access controls.
+ * Generate a time-limited R2 presigned GET URL (valid 1 hour).
  */
-function signedUrl(publicId, resourceType = 'raw') {
-  return cloudinary.url(publicId, {
-    resource_type: resourceType,
-    sign_url:      true,
-    expires_at:    Math.floor(Date.now() / 1000) + 3600, // valid 1 hour
-    type:          'upload',
-    secure:        true,
-  });
+async function signedUrl(storedUrl) {
+  const key = extractKeyFromUrl(storedUrl);
+  if (!key) return storedUrl; // fallback: return URL as-is
+  return getSignedUrl(
+    r2,
+    new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+    { expiresIn: 3600 },
+  );
 }
 
 /**
@@ -64,12 +60,10 @@ function fetchWithRedirect(url, maxRedirects = 5, timeoutMs = 30_000) {
 }
 
 /**
- * Stream a PDF from Cloudinary (or any URL) to the Express response.
+ * Stream a PDF from R2 (or any URL) to the Express response.
  */
 async function proxyPdf(pdfUrl, res, disposition) {
-  const publicId     = extractPublicId(pdfUrl);
-  const resourceType = pdfUrl.includes('/image/') ? 'image' : 'raw';
-  const fetchUrl     = publicId ? signedUrl(publicId, resourceType) : pdfUrl;
+  const fetchUrl = await signedUrl(pdfUrl);
 
   const upstream = await fetchWithRedirect(fetchUrl);
 
@@ -126,6 +120,74 @@ async function proxyPdf(pdfUrl, res, disposition) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class DownloadController {
+
+  /**
+   * GET /api/books/:id/cover
+   * Public. Generates a presigned R2 URL for the cover image and redirects to it.
+   * The browser <img> tag follows the 302 — no CORS issue because <img> is not a fetch().
+   * For Next.js proxy routes, fetch() follows the redirect automatically.
+   */
+  static async getCover(req, res, next) {
+    try {
+      const book = await Book.findOne({
+        where:      { id: req.params.id, isDeleted: false, isActive: true },
+        attributes: ['id', 'coverUrl'],
+      });
+
+      if (!book || !book.coverUrl) {
+        return res.status(404).json({ success: false, message: 'No cover available' });
+      }
+
+      const key = extractKeyFromUrl(book.coverUrl);
+      if (!key) {
+        // If it's already a public URL (e.g. Cloudinary), redirect directly
+        return res.redirect(302, book.coverUrl);
+      }
+
+      const url = await getSignedUrl(
+        r2,
+        new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+        { expiresIn: 3600 },
+      );
+
+      // Cache-friendly redirect — browser/CDN can cache cover for 1 hour
+      res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+      return res.redirect(302, url);
+    } catch (err) { next(err); }
+  }
+
+  /**
+   * GET /api/books/:id/pdf-url
+   * Returns a short-lived presigned R2 URL.
+   * Frontend can open it in a new tab, <iframe>, or PDF.js — no proxy overhead.
+   */
+  static async getPdfUrl(req, res, next) {
+    try {
+      const book = await Book.findOne({
+        where:      { id: req.params.id, isDeleted: false, isActive: true },
+        attributes: ['id', 'title', 'pdfUrl'],
+      });
+
+      if (!book)        throw new NotFoundError('Book not found');
+      if (!book.pdfUrl) return ResponseFormatter.error(res, 'No PDF available for this book', 404, 'NO_PDF');
+
+      const key = extractKeyFromUrl(book.pdfUrl);
+      if (!key) return ResponseFormatter.error(res, 'Invalid PDF URL stored', 500, 'INVALID_URL');
+
+      const url = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+          Bucket:                     BUCKET,
+          Key:                        key,
+          ResponseContentType:        'application/pdf',
+          ResponseContentDisposition: 'inline',
+        }),
+        { expiresIn: 3600 },
+      );
+
+      return ResponseFormatter.success(res, { url, expiresIn: 3600 });
+    } catch (err) { next(err); }
+  }
 
   /**
    * GET /api/books/:id/stream?token=<jwt>

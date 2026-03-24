@@ -1,9 +1,12 @@
 // controllers/uploadController.js
-const cloudinary             = require('../config/cloudinary');
-const ResponseFormatter      = require('../utils/responseFormatter');
-const Helpers                = require('../utils/helpers');
-const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinaryUpload');
-const { MAX_FILE_SIZES }     = require('../config/constants');
+const { DeleteObjectCommand }  = require('@aws-sdk/client-s3');
+const r2                       = require('../config/r2');
+const ResponseFormatter        = require('../utils/responseFormatter');
+const Helpers                  = require('../utils/helpers');
+const { uploadToCloudinary, deleteFromCloudinary, extractKeyFromUrl } = require('../utils/cloudinaryUpload');
+const { MAX_FILE_SIZES }       = require('../config/constants');
+
+const BUCKET = process.env.R2_BUCKET;
 
 const URL_KEY_MAP = {
   cover:  'cover_url',
@@ -19,7 +22,7 @@ const FOLDER_MAP = {
 
 function buildFileInfo(file, result) {
   return {
-    public_id:     result.public_id,
+    key:           result.public_id,   // R2 object key
     format:        result.format,
     resource_type: result.resource_type,
     secure_url:    result.secure_url,
@@ -94,20 +97,20 @@ class UploadController {
     } catch (err) { next(err); }
   }
 
-  // DELETE /api/upload/delete   body: { public_id, resource_type, file_url }
+  // DELETE /api/upload/delete   body: { key, file_url }
   static async deleteFile(req, res, next) {
     try {
-      const { public_id, resource_type, file_url } = req.body;
-      
-      // Support legacy file_url deletion OR targeted public_id deletion
-      if (public_id) {
-         await cloudinary.uploader.destroy(public_id, {
-           resource_type: resource_type || 'raw',
-         });
+      const { key, public_id, file_url } = req.body;
+
+      // Accept: key (R2 object key), legacy public_id (treated as key), or file_url
+      const objectKey = key || public_id || extractKeyFromUrl(file_url);
+
+      if (objectKey) {
+        await r2.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: objectKey }));
       } else if (file_url) {
-         await deleteFromCloudinary(file_url);
+        await deleteFromCloudinary(file_url); // tries extractKeyFromUrl internally
       } else {
-         return ResponseFormatter.error(res, 'file_url or public_id is required', 400, 'FILE_IDENTIFIER_REQUIRED');
+        return ResponseFormatter.error(res, 'key or file_url is required', 400, 'FILE_IDENTIFIER_REQUIRED');
       }
 
       return ResponseFormatter.noContent(res, null, 'File deleted successfully');

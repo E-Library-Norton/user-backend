@@ -10,11 +10,15 @@ router.get ('/',    BookController.getAll);
 router.post('/scan-search', uploadScan, BookController.scanSearch);
 router.get ('/:id', BookController.getById);
 
-// PDF streaming:
-// GET  /:id/stream   → PUBLIC inline preview — no login needed to read
+// PDF access:
+// GET  /:id/cover    → PUBLIC — redirects to presigned cover image URL
+// GET  /:id/pdf-url  → REQUIRES login — returns a 1-hour presigned R2 URL (no proxy)
+// GET  /:id/stream   → PUBLIC inline proxy-stream — no login needed to read
 // GET  /:id/download → REQUIRES login — records download + serves as attachment
-router.get('/:id/stream',   DownloadController.streamPdf);        // ← public
-router.get('/:id/download', authenticateStream, DownloadController.recordDownload); // ← auth
+router.get('/:id/cover',    DownloadController.getCover);                            // ← public cover
+router.get('/:id/pdf-url',  authenticate,        DownloadController.getPdfUrl);      // ← presigned URL
+router.get('/:id/stream',   DownloadController.streamPdf);                           // ← public proxy
+router.get('/:id/download', authenticateStream,  DownloadController.recordDownload); // ← auth proxy
 
 // Admin stats for a book
 router.get('/:id/downloads', authenticate, authorize('admin', 'librarian'), BookController.getDownloads);
