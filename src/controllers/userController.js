@@ -6,6 +6,10 @@ const Logger = require("../utils/logger");
 const { PAGINATION } = require("../config/constants");
 const { ValidationError, NotFoundError, ConflictError } = require("../utils/errors");
 const { logActivity } = require("../utils/activityLogger");
+const r2 = require('../config/r2');
+const { GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { extractKeyFromUrl } = require('../utils/cloudR2Upload');
 
 class UserController {
 
@@ -245,6 +249,37 @@ class UserController {
     } catch (err) {
       next(err);
     }
+  }
+
+  // ── GET /api/users/:id/avatar (public) ──────────────────────────────────────
+  // Returns a signed R2 redirect for any user's avatar (no auth required).
+  static async getAvatarById(req, res, next) {
+    try {
+      const user = await User.findByPk(req.params.id, { attributes: ['id', 'avatar'] });
+      if (!user || !user.avatar) {
+        return res.status(404).json({ success: false, message: 'Avatar not found' });
+      }
+
+      const key = extractKeyFromUrl(user.avatar);
+
+      // Legacy external URL — redirect directly
+      if (!key) {
+        res.set('Cache-Control', 'public, max-age=600');
+        return res.redirect(302, user.avatar);
+      }
+
+      const signedUrl = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+          Bucket: process.env.R2_BUCKET,
+          Key: key,
+        }),
+        { expiresIn: 3600 }
+      );
+
+      res.set('Cache-Control', 'public, max-age=600');
+      return res.redirect(302, signedUrl);
+    } catch (err) { next(err); }
   }
 }
 

@@ -1,5 +1,3 @@
-// utils/cloudinaryUpload.js  ─  now backed by Cloudflare R2 (S3-compatible)
-// Exports remain identical so all existing callers work without any changes.
 const { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const r2   = require('../config/r2');
@@ -105,7 +103,7 @@ function extractKeyFromUrl(url) {
  * Returns a Cloudinary-compatible result object:
  *   { secure_url, public_id, format, resource_type }
  */
-async function uploadToCloudinary(file, fieldNameOrFolder, resourceTypeOverride) {
+async function uploadToR2(file, fieldNameOrFolder, resourceTypeOverride) {
   const folder       = FOLDER[fieldNameOrFolder] || fieldNameOrFolder || 'uploads';
   const resourceType = resourceTypeOverride || getResourceType(file.mimetype, fieldNameOrFolder);
   const key          = buildKey(file.originalname, file.mimetype, folder);
@@ -128,7 +126,7 @@ async function uploadToCloudinary(file, fieldNameOrFolder, resourceTypeOverride)
 /**
  * Delete a file from R2 by its stored URL.
  */
-async function deleteFromCloudinary(storedUrl) {
+async function deleteFromR2(storedUrl) {
   if (!storedUrl) return;
   try {
     const key = extractKeyFromUrl(storedUrl);
@@ -141,7 +139,6 @@ async function deleteFromCloudinary(storedUrl) {
 
 /**
  * Generate a presigned R2 URL that triggers a browser "Save As" download.
- * Replaces the Cloudinary fl_attachment transformation.
  */
 async function buildDownloadUrl(storedUrl, filename) {
   if (!storedUrl) return storedUrl;
@@ -165,8 +162,8 @@ async function buildDownloadUrl(storedUrl, filename) {
 }
 
 module.exports = {
-  uploadToCloudinary,
-  deleteFromCloudinary,
+  uploadToR2,
+  deleteFromR2,
   buildDownloadUrl,
   buildPublicId,      // backward-compat alias → buildKey
   buildKey,

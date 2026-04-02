@@ -3,7 +3,7 @@ const { DeleteObjectCommand }  = require('@aws-sdk/client-s3');
 const r2                       = require('../config/r2');
 const ResponseFormatter        = require('../utils/responseFormatter');
 const Helpers                  = require('../utils/helpers');
-const { uploadToCloudinary, deleteFromCloudinary, extractKeyFromUrl } = require('../utils/cloudinaryUpload');
+const { uploadToCloudinary, deleteFromCloudinary, extractKeyFromUrl } = require('../utils/cloudR2Upload');
 const { MAX_FILE_SIZES }       = require('../config/constants');
 
 const BUCKET = process.env.R2_BUCKET;

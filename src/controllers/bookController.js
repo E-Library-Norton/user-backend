@@ -4,7 +4,7 @@ const { Book, Author, Editor, Category, Publisher, MaterialType, Department, Dow
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 const { logActivity } = require('../utils/activityLogger');
-const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
+const { uploadToCloudinary } = require('../utils/cloudR2Upload');
 const { scanBookCover, syncBookCover, deleteBookCover } = require('../utils/vectorSearchService');
 const { getIO, EVENTS } = require('../utils/socket');
 const { broadcastNotification } = require('../utils/pushNotification');

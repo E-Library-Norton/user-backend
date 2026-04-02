@@ -6,7 +6,10 @@ const UserController = require("../controllers/userController");
 const { authenticate, authorize } = require("../middleware/auth");
 const { userRules } = require("../middleware/validation");
 
-// All user routes require a valid token
+// ── Public: anyone can fetch a user's avatar (returns signed R2 redirect) ────
+router.get("/:id/avatar", UserController.getAvatarById);
+
+// All remaining user routes require a valid token
 router.use(authenticate);
 
 // Admins can manage users

@@ -6,7 +6,7 @@ const { Download, Book, User } = require('../models');
 const { GetObjectCommand }     = require('@aws-sdk/client-s3');
 const { getSignedUrl }         = require('@aws-sdk/s3-request-presigner');
 const r2                       = require('../config/r2');
-const { extractKeyFromUrl }    = require('../utils/cloudinaryUpload');
+const { extractKeyFromUrl }    = require('../utils/cloudR2Upload');
 const ResponseFormatter        = require('../utils/responseFormatter');
 const { NotFoundError }        = require('../utils/errors');
 
