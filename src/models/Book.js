@@ -93,6 +93,16 @@ const Book = sequelize.define(
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
+    indexes: [
+      { fields: ['is_deleted', 'is_active'] },
+      { fields: ['category_id'] },
+      { fields: ['publisher_id'] },
+      { fields: ['department_id'] },
+      { fields: ['type_id'] },
+      { fields: ['views'] },
+      { fields: ['created_at'] },
+      { fields: ['publication_year'] },
+    ],
   }
 );
 

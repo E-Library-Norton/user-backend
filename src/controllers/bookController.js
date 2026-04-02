@@ -120,8 +120,8 @@ class BookController {
       });
       if (!book) throw new NotFoundError('Book not found');
 
-      // Increment view count
-      await book.increment('views');
+      // Fire-and-forget view increment — don't block response
+      book.increment('views').catch(() => {});
 
       return ResponseFormatter.success(res, book);
     } catch (err) { next(err); }

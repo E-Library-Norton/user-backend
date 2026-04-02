@@ -47,6 +47,12 @@ const Activity = sequelize.define(
     {
         tableName: "activities",
         timestamps: false,
+        indexes: [
+            { fields: ['user_id'] },
+            { fields: ['created_at'] },
+            { fields: ['action'] },
+            { fields: ['target_type'] },
+        ],
     }
 );
 

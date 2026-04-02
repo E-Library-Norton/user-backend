@@ -1,5 +1,5 @@
 // controllers/reviewController.js
-const { Op } = require('sequelize');
+const { Op, fn, col } = require('sequelize');
 const { Review, User, Book } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { NotFoundError, ConflictError, AuthorizationError } = require('../utils/errors');
@@ -39,16 +39,13 @@ class ReviewController {
         offset,
       });
 
-      // Calculate average rating
-      const ratings = await Review.findAll({
+      // Calculate average rating — single SQL aggregate instead of fetching all rows
+      const avgResult = await Review.findOne({
         where: { bookId, isDeleted: false },
-        attributes: ['rating'],
+        attributes: [[fn('AVG', col('rating')), 'avgRating']],
         raw: true,
       });
-      const avgRating =
-        ratings.length > 0
-          ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
-          : null;
+      const avgRating = avgResult?.avgRating ? Number(Number(avgResult.avgRating).toFixed(1)) : null;
 
       return ResponseFormatter.success(res, {
         reviews: rows,

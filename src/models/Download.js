@@ -34,6 +34,11 @@ const Download = sequelize.define(
   {
     tableName: "downloads",
     timestamps: false,
+    indexes: [
+      { fields: ['user_id'] },
+      { fields: ['book_id'] },
+      { fields: ['downloaded_at'] },
+    ],
   }
 );
 

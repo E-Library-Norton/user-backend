@@ -1,11 +1,12 @@
 const dotenv = require("dotenv");
 dotenv.config({ path: ['.env.local', '.env'] });
 
-const http    = require('http');
-const express = require("express");
-const cors    = require("cors");
-const helmet  = require("helmet");
-const morgan  = require("morgan");
+const http        = require('http');
+const express     = require("express");
+const cors        = require("cors");
+const helmet      = require("helmet");
+const morgan      = require("morgan");
+const compression = require("compression");
 const { sequelize } = require("./config/database");
 const { initSocket } = require('./utils/socket');
 
@@ -41,11 +42,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
+app.use(compression());  // gzip/brotli — 30–70% smaller responses
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
-app.use('/uploads', express.static('uploads'));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('tiny'));
+}
+app.use('/uploads', express.static('uploads', {
+  maxAge: '1d',
+  etag: true,
+}));
 
 // ── Routes
 app.use('/api', require('./routes'));
@@ -81,7 +90,10 @@ async function connectWithRetry(retries = 5, delayMs = 3000) {
     try {
       await sequelize.authenticate();
       console.log("Database connected successfully!");
-      await sequelize.sync({ alter: true });
+      // Only sync schema in development — use migrations in production
+      if (process.env.NODE_ENV !== 'production') {
+        await sequelize.sync({ alter: true });
+      }
       httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
       return;
     } catch (err) {

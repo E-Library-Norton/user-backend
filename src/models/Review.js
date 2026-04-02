@@ -41,6 +41,11 @@ const Review = sequelize.define(
     timestamps: true,
     createdAt:  'created_at',
     updatedAt:  'updated_at',
+    indexes: [
+      { fields: ['book_id', 'is_deleted'] },
+      { fields: ['user_id'] },
+      { fields: ['created_at'] },
+    ],
   }
 );
 
