@@ -60,10 +60,13 @@ class AuthController {
         include: { association: 'Roles' },
       });
 
-      if (!user || !(await user.validatePassword(password))) {
-        throw new AuthenticationError('Invalid credentials');
+      if (!user) {
+        throw new AuthenticationError('No account found with that username, email, or student ID');
       }
-      if (!user.isActive) throw new AuthenticationError('Account is deactivated');
+      if (!(await user.validatePassword(password))) {
+        throw new AuthenticationError('Incorrect password. Please try again');
+      }
+      if (!user.isActive) throw new AuthenticationError('Your account has been deactivated. Please contact an administrator');
 
       const accessToken  = AuthController.generateAccessToken(user);
       const refreshToken = AuthController.generateRefreshToken(user);
