@@ -121,9 +121,9 @@ class UserController {
       const user = await User.findByPk(req.params.id);
       if (!user) throw new NotFoundError("User not found");
 
-      const { avatar, firstName, lastName, studentId, faculty, study_year, isActive, roleIds } = req.body;
+      const { avatar, firstName, lastName, studentId, email, study_year, isActive, roleIds } = req.body;
 
-      await user.update({ avatar, firstName, lastName, studentId, faculty, study_year, isActive });
+      await user.update({ avatar, firstName, lastName, studentId, email, study_year, isActive });
 
       if (roleIds !== undefined) {
         const roles = roleIds.length ? await Role.findAll({ where: { id: roleIds } }) : [];
