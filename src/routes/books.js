@@ -2,6 +2,7 @@
 const router             = require('express').Router();
 const BookController     = require('../controllers/bookController');
 const DownloadController = require('../controllers/downloadController');
+const ReviewController   = require('../controllers/reviewController');
 const { authenticate, authorize, authenticateStream } = require('../middleware/auth');
 const { uploadMulti, uploadScan }    = require('../middleware/upload');
 
@@ -28,5 +29,11 @@ router.get('/:id/downloads', authenticate, authorize('admin', 'librarian'), Book
 router.post  ('/',     authenticate, authorize('admin', 'librarian'), uploadMulti, BookController.create);
 router.put   ('/:id',  authenticate, authorize('admin', 'librarian'), uploadMulti, BookController.update);
 router.delete('/:id',  authenticate, authorize('admin'),              BookController.delete);
+
+// ── Nested review routes for a book ─────────────────────────────────────────
+// GET  /api/books/:bookId/reviews  — public
+// POST /api/books/:bookId/reviews  — authenticated users
+router.get ('/:bookId/reviews', ReviewController.getByBook);
+router.post('/:bookId/reviews', authenticate, ReviewController.create);
 
 module.exports = router;

@@ -53,6 +53,12 @@ const Book = sequelize.define(
       allowNull:    false,
       defaultValue: 0,
     },
+    language: {
+      type:         DataTypes.STRING(10),
+      allowNull:    true,
+      defaultValue: null,
+      comment:      'ISO 639-1 code e.g. en, km, fr',
+    },
     publisherId: {
       type:  DataTypes.INTEGER,
       field: 'publisher_id',

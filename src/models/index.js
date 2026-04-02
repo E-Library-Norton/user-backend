@@ -16,6 +16,8 @@ const Department = require('./Department');
 const Download = require('./Download');
 const Setting = require('./Setting');
 const Activity = require('./Activity');
+const Review          = require('./Review');
+const PushSubscription = require('./PushSubscription');
 
 // ── Junction table models (all timestamps: false — these tables have NO created_at) ──
 const UsersRoles = sequelize.define('UsersRoles', {
@@ -98,10 +100,21 @@ Book.hasMany(Download, { foreignKey: 'book_id', as: 'Downloads' });
 Activity.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
 User.hasMany(Activity, { foreignKey: 'user_id', as: 'Activities' });
 
+// Reviews
+Review.belongsTo(Book, { foreignKey: 'book_id', as: 'Book' });
+Review.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
+Book.hasMany(Review, { foreignKey: 'book_id', as: 'Reviews' });
+User.hasMany(Review, { foreignKey: 'user_id', as: 'Reviews' });
+
+// PushSubscriptions
+PushSubscription.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
+User.hasMany(PushSubscription, { foreignKey: 'user_id', as: 'PushSubscriptions' });
+
 // ── Exports 
 module.exports = {
   sequelize,
   User, Role, Permission, Setting, Activity,
   Book, Author, Editor, Category, Publisher, MaterialType, Department, Download,
+  Review, PushSubscription,
   BookAuthor, BookEditor,
 };

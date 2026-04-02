@@ -1,13 +1,16 @@
 const dotenv = require("dotenv");
 dotenv.config({ path: ['.env.local', '.env'] });
 
+const http    = require('http');
 const express = require("express");
 const cors    = require("cors");
 const helmet  = require("helmet");
 const morgan  = require("morgan");
 const { sequelize } = require("./config/database");
+const { initSocket } = require('./utils/socket');
 
 const app = express();
+const httpServer = http.createServer(app);
 
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
@@ -18,6 +21,9 @@ const ALLOWED_ORIGINS = [
   'https://frontend.samnangchan.shop',
   'https://admin-elibrary.samnangchan.shop'
 ];
+
+// ── Socket.IO (real-time) ─────────────────────────────────────────────────────
+initSocket(httpServer, ALLOWED_ORIGINS);
 
 app.get("/", (req, res) => {
   res.status(200).json({ success: true, message: "E-Library API is running" });
@@ -76,7 +82,7 @@ async function connectWithRetry(retries = 5, delayMs = 3000) {
       await sequelize.authenticate();
       console.log("Database connected successfully!");
       await sequelize.sync({ alter: true });
-      app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+      httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
       return;
     } catch (err) {
       console.warn(`DB connection attempt ${attempt}/${retries} failed: ${err.message}`);

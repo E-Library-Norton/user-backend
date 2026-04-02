@@ -6,6 +6,17 @@ const { ValidationError, NotFoundError, ConflictError } = require('../utils/erro
 const { logActivity } = require('../utils/activityLogger');
 const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
 const { scanBookCover, syncBookCover, deleteBookCover } = require('../utils/vectorSearchService');
+const { getIO, EVENTS } = require('../utils/socket');
+const { broadcastNotification } = require('../utils/pushNotification');
+
+// ── Helper: safely emit to admin room without crashing if Socket not ready ────
+function emitToAdmin(event, payload) {
+  try { getIO().to('admin').emit(event, payload); } catch { /* ignore */ }
+}
+// Also broadcast publicly so the student frontend receives book events
+function emitPublic(event, payload) {
+  try { getIO().emit(event, payload); } catch { /* ignore */ }
+}
 
 // ── Shared include for full book detail ───────────────────────────────────────
 const BOOK_INCLUDE = [
@@ -40,6 +51,7 @@ class BookController {
         search = '',
         categoryId, publisherId, departmentId, typeId,
         publicationYear, isActive,
+        yearFrom, yearTo, language, authorId,
         sortBy = 'created_at', sortOrder = 'DESC',
       } = req.query;
 
@@ -60,10 +72,29 @@ class BookController {
       if (publicationYear) where.publicationYear = publicationYear;
       if (isActive !== undefined) where.isActive = isActive === 'true';
 
+      // Advanced filters
+      if (yearFrom || yearTo) {
+        where.publicationYear = {
+          ...(where.publicationYear || {}),
+          ...(yearFrom ? { [Op.gte]: Number(yearFrom) } : {}),
+          ...(yearTo   ? { [Op.lte]: Number(yearTo)   } : {}),
+        };
+      }
+      if (language) where.language = language;
+
+      // authorId filter — requires joining through BookAuthor
+      const includeWithAuthorFilter = authorId
+        ? BOOK_INCLUDE.map((inc) =>
+            inc.as === 'Authors'
+              ? { ...inc, where: { id: authorId }, required: true }
+              : inc
+          )
+        : BOOK_INCLUDE;
+
       const offset = (Number(page) - 1) * Number(limit);
       const { count, rows } = await Book.findAndCountAll({
         where,
-        include: BOOK_INCLUDE,
+        include: includeWithAuthorFilter,
         order: [[sortBy, sortOrder.toUpperCase()]],
         limit: Number(limit),
         offset,
@@ -282,6 +313,17 @@ class BookController {
         targetType: 'book'
       });
 
+      // Real-time: notify admin room + public broadcast
+      emitToAdmin(EVENTS.BOOK_CREATED, { book: created });
+      emitPublic(EVENTS.BOOK_CREATED, { book: created });
+
+      // Web Push: notify all subscribers of the new book
+      broadcastNotification(
+        '📚 New Book Added',
+        `"${created.title}" is now available in the library.`,
+        `/books/${created.id}`
+      ).catch(() => {}); // fire-and-forget
+
       return ResponseFormatter.success(res, created, 'Book created successfully', 201);
     } catch (err) { next(err); }
   }
@@ -415,6 +457,10 @@ class BookController {
         targetType: 'book'
       });
 
+      // Real-time: notify admin room + public broadcast
+      emitToAdmin(EVENTS.BOOK_UPDATED, { book: updated });
+      emitPublic(EVENTS.BOOK_UPDATED, { book: updated });
+
       return ResponseFormatter.success(res, updated, 'Book updated successfully');
     } catch (err) { next(err); }
   }
@@ -439,6 +485,10 @@ class BookController {
         targetName: book.title,
         targetType: 'book'
       });
+
+      // Real-time: notify admin room + public broadcast
+      emitToAdmin(EVENTS.BOOK_DELETED, { bookId: book.id });
+      emitPublic(EVENTS.BOOK_DELETED, { bookId: book.id });
 
       return ResponseFormatter.noContent(res, null, 'Book deleted successfully');
     } catch (err) { next(err); }
