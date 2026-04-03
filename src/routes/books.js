@@ -7,9 +7,9 @@ const { authenticate, authorize, authenticateStream } = require('../middleware/a
 const { uploadMulti, uploadScan }    = require('../middleware/upload');
 
 // Public — anyone can browse
-router.get ('/',    BookController.getAll);
+router.get ('/',           BookController.getAll);
 router.post('/scan-search', uploadScan, BookController.scanSearch);
-router.get ('/:id', BookController.getById);
+router.get ('/:id',        BookController.getById);
 
 // PDF access:
 // GET  /:id/cover    → PUBLIC — redirects to presigned cover image URL

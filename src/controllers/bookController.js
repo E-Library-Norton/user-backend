@@ -1,10 +1,10 @@
 // controllers/book.controller.js
-const { Op } = require('sequelize');
-const { Book, Author, Editor, Category, Publisher, MaterialType, Department, Download } = require('../models');
+const { Op, literal } = require('sequelize');
+const { sequelize, Book, Author, Editor, Category, Publisher, MaterialType, Department, Download, Review, User } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 const { logActivity } = require('../utils/activityLogger');
-const { uploadToCloudinary } = require('../utils/cloudR2Upload');
+const { uploadToR2 } = require('../utils/cloudR2Upload');
 const { scanBookCover, syncBookCover, deleteBookCover } = require('../utils/vectorSearchService');
 const { getIO, EVENTS } = require('../utils/socket');
 const { broadcastNotification } = require('../utils/pushNotification');
@@ -41,74 +41,101 @@ const BOOK_INCLUDE = [
   },
 ];
 
+// ── Rating subquery attributes (avoids N+1 for star ratings) ─────────────────
+const RATING_ATTRIBUTES = [
+  [
+    literal('(SELECT ROUND(AVG(r.rating)::numeric, 1) FROM reviews r WHERE r.book_id = "Book".id AND r.is_deleted = false)'),
+    'averageRating',
+  ],
+  [
+    literal('(SELECT COUNT(*) FROM reviews r WHERE r.book_id = "Book".id AND r.is_deleted = false)'),
+    'reviewCount',
+  ],
+];
+
 class BookController {
 
-  // ── GET /api/books 
+  // ── GET /api/books  (Two-query: COUNT + paginated findAll — no GROUP BY issues)
   static async getAll(req, res, next) {
     try {
       const {
         page = 1, limit = 10,
-        search = '',
-        categoryId, publisherId, departmentId, typeId,
-        publicationYear, isActive,
-        yearFrom, yearTo, language, authorId,
-        sortBy = 'created_at', sortOrder = 'DESC',
+        search, categoryId, publisherId, departmentId, typeId,
+        publicationYear, yearFrom, yearTo, language, authorId,
+        isActive, sortBy = 'created_at', sortOrder = 'DESC',
       } = req.query;
 
+      const pageNum  = Math.max(1, Number(page));
+      const limitNum = Math.min(100, Math.max(1, Number(limit)));
+      const offset   = (pageNum - 1) * limitNum;
+
+      // ── Dynamic WHERE ──────────────────────────────────────────────────
       const where = { isDeleted: false };
 
+      if (isActive !== undefined)  where.isActive        = String(isActive) === 'true';
+      if (categoryId)              where.categoryId      = categoryId;
+      if (publisherId)             where.publisherId     = publisherId;
+      if (departmentId)            where.departmentId    = departmentId;
+      if (typeId)                  where.typeId          = typeId;
+      if (language)                where.language        = language;
+
+      if (publicationYear) {
+        where.publicationYear = publicationYear;
+      } else if (yearFrom || yearTo) {
+        where.publicationYear = {};
+        if (yearFrom) where.publicationYear[Op.gte] = Number(yearFrom);
+        if (yearTo)   where.publicationYear[Op.lte] = Number(yearTo);
+      }
+
       if (search) {
+        const term = `%${search}%`;
         where[Op.or] = [
-          { title: { [Op.iLike]: `%${search}%` } },
-          { titleKh: { [Op.iLike]: `%${search}%` } },
-          { isbn: { [Op.iLike]: `%${search}%` } },
-          { description: { [Op.iLike]: `%${search}%` } },
+          { title:   { [Op.iLike]: term } },
+          { titleKh: { [Op.iLike]: term } },
+          { isbn:    { [Op.iLike]: term } },
         ];
       }
-      if (categoryId) where.categoryId = categoryId;
-      if (publisherId) where.publisherId = publisherId;
-      if (departmentId) where.departmentId = departmentId;
-      if (typeId) where.typeId = typeId;
-      if (publicationYear) where.publicationYear = publicationYear;
-      if (isActive !== undefined) where.isActive = isActive === 'true';
 
-      // Advanced filters
-      if (yearFrom || yearTo) {
-        where.publicationYear = {
-          ...(where.publicationYear || {}),
-          ...(yearFrom ? { [Op.gte]: Number(yearFrom) } : {}),
-          ...(yearTo   ? { [Op.lte]: Number(yearTo)   } : {}),
-        };
+      // ── Author filter (requires a subquery to avoid JOIN count issues) ─
+      if (authorId) {
+        const { BookAuthor } = require('../models');
+        const authorBookIds = (await BookAuthor.findAll({
+          where: { author_id: authorId },
+          attributes: ['book_id'],
+          raw: true,
+        })).map(r => r.book_id);
+        where.id = { [Op.in]: authorBookIds };
       }
-      if (language) where.language = language;
 
-      // authorId filter — requires joining through BookAuthor
-      const includeWithAuthorFilter = authorId
-        ? BOOK_INCLUDE.map((inc) =>
-            inc.as === 'Authors'
-              ? { ...inc, where: { id: authorId }, required: true }
-              : inc
-          )
-        : BOOK_INCLUDE;
+      // ── Sorting whitelist ──────────────────────────────────────────────
+      const ALLOWED_SORTS = ['created_at', 'title', 'views', 'downloads', 'publication_year', 'updated_at'];
+      const safeSort  = ALLOWED_SORTS.includes(sortBy) ? sortBy : 'created_at';
+      const safeOrder = sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-      const offset = (Number(page) - 1) * Number(limit);
-      const { count, rows } = await Book.findAndCountAll({
+      // ── Query 1: total count (fast — no JOINs) ────────────────────────
+      const total = await Book.count({ where });
+
+      // ── Query 2: paginated books with full includes + ratings ──────────
+      const books = await Book.findAll({
         where,
-        include: includeWithAuthorFilter,
-        order: [[sortBy, sortOrder.toUpperCase()]],
-        limit: Number(limit),
+        include: BOOK_INCLUDE,
+        attributes: { include: RATING_ATTRIBUTES },
+        order:  [[safeSort, safeOrder]],
+        limit:  limitNum,
         offset,
-        distinct: true,
+        subQuery: true,
       });
 
       return ResponseFormatter.success(res, {
-        books: rows,
-        total: count,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(count / Number(limit)),
+        books,
+        total,
+        page:       pageNum,
+        limit:      limitNum,
+        totalPages: Math.ceil(total / limitNum),
       });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   }
 
   // ── GET /api/books/:id 
@@ -117,6 +144,7 @@ class BookController {
       const book = await Book.findOne({
         where: { id: req.params.id, isDeleted: false },
         include: BOOK_INCLUDE,
+        attributes: { include: RATING_ATTRIBUTES },
       });
       if (!book) throw new NotFoundError('Book not found');
 
@@ -242,14 +270,20 @@ class BookController {
 
       // Attach authors — prefer authorNames (find-or-create) over legacy authorIds
       if (parsedAuthorNames.length > 0) {
-        for (let i = 0; i < parsedAuthorNames.length; i++) {
-          const trimmed = String(parsedAuthorNames[i] ?? '').trim();
-          if (!trimmed) continue;
-          const [author] = await Author.findOrCreate({
-            where: { name: trimmed },
-            defaults: { name: trimmed },
-          });
-          await book.addAuthor(author.id, { through: { isPrimaryAuthor: i === 0 } });
+        const authorRecords = await Promise.all(
+          parsedAuthorNames
+            .map((n, i) => ({ name: String(n ?? '').trim(), idx: i }))
+            .filter(({ name }) => name)
+            .map(async ({ name, idx }) => {
+              const [author] = await Author.findOrCreate({ where: { name }, defaults: { name } });
+              return { authorId: author.id, isPrimary: idx === 0 };
+            })
+        );
+        if (authorRecords.length) {
+          const { BookAuthor } = require('../models');
+          await BookAuthor.bulkCreate(
+            authorRecords.map(r => ({ book_id: book.id, author_id: r.authorId, is_primary_author: r.isPrimary }))
+          );
         }
       } else if (parsedAuthorIds.length > 0) {
         const pairs = parsedAuthorIds.map((a) =>
@@ -268,14 +302,20 @@ class BookController {
         try { parsedEditorNames = JSON.parse(editorNames); } catch { parsedEditorNames = []; }
       }
       if (!Array.isArray(parsedEditorNames)) parsedEditorNames = [];
-      for (const raw of parsedEditorNames) {
-        const trimmed = String(raw ?? '').trim();
-        if (!trimmed) continue;
-        const [editor] = await Editor.findOrCreate({
-          where: { name: trimmed },
-          defaults: { name: trimmed },
-        });
-        await book.addEditor(editor.id);
+      if (parsedEditorNames.length > 0) {
+        const editorIds = await Promise.all(
+          parsedEditorNames
+            .map(r => String(r ?? '').trim())
+            .filter(Boolean)
+            .map(async (name) => {
+              const [editor] = await Editor.findOrCreate({ where: { name }, defaults: { name } });
+              return editor.id;
+            })
+        );
+        if (editorIds.length) {
+          const { BookEditor } = require('../models');
+          await BookEditor.bulkCreate(editorIds.map(id => ({ book_id: book.id, editor_id: id })));
+        }
       }
 
       // Attach publishers — find-or-create by name
@@ -285,15 +325,21 @@ class BookController {
       }
       if (!Array.isArray(parsedPublisherNames)) parsedPublisherNames = [];
       let firstPublisherId = null;
-      for (const raw of parsedPublisherNames) {
-        const trimmed = String(raw ?? '').trim();
-        if (!trimmed) continue;
-        const [publisher] = await Publisher.findOrCreate({
-          where: { name: trimmed },
-          defaults: { name: trimmed },
-        });
-        await book.addPublisher(publisher.id);
-        if (!firstPublisherId) firstPublisherId = publisher.id;
+      if (parsedPublisherNames.length > 0) {
+        const pubIds = await Promise.all(
+          parsedPublisherNames
+            .map(r => String(r ?? '').trim())
+            .filter(Boolean)
+            .map(async (name) => {
+              const [publisher] = await Publisher.findOrCreate({ where: { name }, defaults: { name } });
+              return publisher.id;
+            })
+        );
+        if (pubIds.length) {
+          const { PublishersBooks } = require('../models');
+          await PublishersBooks.bulkCreate(pubIds.map(id => ({ book_id: book.id, publisher_id: id })));
+          firstPublisherId = pubIds[0];
+        }
       }
       if (firstPublisherId) await book.update({ publisherId: firstPublisherId });
 
@@ -386,14 +432,20 @@ class BookController {
       // Replace authors — prefer authorNames (find-or-create) over legacy authorIds
       if (Array.isArray(parsedAuthorNames)) {
         await book.setAuthors([]); // clear existing
-        for (let i = 0; i < parsedAuthorNames.length; i++) {
-          const trimmed = String(parsedAuthorNames[i] ?? '').trim();
-          if (!trimmed) continue;
-          const [author] = await Author.findOrCreate({
-            where: { name: trimmed },
-            defaults: { name: trimmed },
-          });
-          await book.addAuthor(author.id, { through: { isPrimaryAuthor: i === 0 } });
+        const authorRecords = await Promise.all(
+          parsedAuthorNames
+            .map((n, i) => ({ name: String(n ?? '').trim(), idx: i }))
+            .filter(({ name }) => name)
+            .map(async ({ name, idx }) => {
+              const [author] = await Author.findOrCreate({ where: { name }, defaults: { name } });
+              return { authorId: author.id, isPrimary: idx === 0 };
+            })
+        );
+        if (authorRecords.length) {
+          const { BookAuthor } = require('../models');
+          await BookAuthor.bulkCreate(
+            authorRecords.map(r => ({ book_id: book.id, author_id: r.authorId, is_primary_author: r.isPrimary }))
+          );
         }
       } else if (parsedAuthorIds !== undefined) {
         // Legacy authorIds path
@@ -414,14 +466,18 @@ class BookController {
       }
       if (Array.isArray(parsedEditorNames)) {
         await book.setEditors([]); // clear existing
-        for (const raw of parsedEditorNames) {
-          const trimmed = String(raw ?? '').trim();
-          if (!trimmed) continue;
-          const [editor] = await Editor.findOrCreate({
-            where: { name: trimmed },
-            defaults: { name: trimmed },
-          });
-          await book.addEditor(editor.id);
+        const editorIds = await Promise.all(
+          parsedEditorNames
+            .map(r => String(r ?? '').trim())
+            .filter(Boolean)
+            .map(async (name) => {
+              const [editor] = await Editor.findOrCreate({ where: { name }, defaults: { name } });
+              return editor.id;
+            })
+        );
+        if (editorIds.length) {
+          const { BookEditor } = require('../models');
+          await BookEditor.bulkCreate(editorIds.map(id => ({ book_id: book.id, editor_id: id })));
         }
       }
 
@@ -433,15 +489,19 @@ class BookController {
       if (Array.isArray(parsedPublisherNames)) {
         await book.setPublishers([]);
         let firstPublisherId = null;
-        for (const raw of parsedPublisherNames) {
-          const trimmed = String(raw ?? '').trim();
-          if (!trimmed) continue;
-          const [publisher] = await Publisher.findOrCreate({
-            where: { name: trimmed },
-            defaults: { name: trimmed },
-          });
-          await book.addPublisher(publisher.id);
-          if (!firstPublisherId) firstPublisherId = publisher.id;
+        const pubIds = await Promise.all(
+          parsedPublisherNames
+            .map(r => String(r ?? '').trim())
+            .filter(Boolean)
+            .map(async (name) => {
+              const [publisher] = await Publisher.findOrCreate({ where: { name }, defaults: { name } });
+              return publisher.id;
+            })
+        );
+        if (pubIds.length) {
+          const { PublishersBooks } = require('../models');
+          await PublishersBooks.bulkCreate(pubIds.map(id => ({ book_id: book.id, publisher_id: id })));
+          firstPublisherId = pubIds[0];
         }
         if (firstPublisherId) await book.update({ publisherId: firstPublisherId });
       }
@@ -505,7 +565,7 @@ class BookController {
 
       const { count, rows } = await Download.findAndCountAll({
         where: { bookId: book.id },
-        include: [{ model: require('../models').User, as: 'User', attributes: ['id', 'username', 'email'] }],
+        include: [{ model: User, as: 'User', attributes: ['id', 'username', 'firstName', 'lastName', 'email'] }],
         order: [['downloadedAt', 'DESC']],
         limit: Number(limit),
         offset,

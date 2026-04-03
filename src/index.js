@@ -90,10 +90,6 @@ async function connectWithRetry(retries = 5, delayMs = 3000) {
     try {
       await sequelize.authenticate();
       console.log("Database connected successfully!");
-      // Only sync schema in development — use migrations in production
-      if (process.env.NODE_ENV !== 'production') {
-        await sequelize.sync({ alter: true });
-      }
       httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
       return;
     } catch (err) {

@@ -12,6 +12,7 @@ const Publisher = sequelize.define(
         name: {
             type: DataTypes.STRING(255),
             allowNull: false,
+            unique: true,
         },
         nameKh: {
             type: DataTypes.STRING(255),

@@ -270,9 +270,20 @@ class StatsController {
             const { limit = 10 } = req.query;
             const popularBooks = await Book.findAll({
                 where: { isDeleted: false },
+                include: [
+                    { model: Category, as: 'Category', attributes: ['id', 'name'] },
+                    { model: Author, as: 'Authors', attributes: ['id', 'name'], through: { attributes: [] } },
+                ],
+                attributes: {
+                    include: [
+                        [literal('(SELECT ROUND(AVG(r.rating)::numeric, 1) FROM reviews r WHERE r.book_id = "Book".id AND r.is_deleted = false)'), 'averageRating'],
+                        [literal('(SELECT COUNT(*) FROM reviews r WHERE r.book_id = "Book".id AND r.is_deleted = false)'), 'reviewCount'],
+                    ],
+                },
                 order: [["views", "DESC"]],
                 limit: parseInt(limit),
-                attributes: ["id", "title", "isbn", "views", "coverUrl"],
+                distinct: true,
+                subQuery: false,
             });
             return ResponseFormatter.success(res, { popularBooks });
         } catch (error) {
@@ -285,9 +296,20 @@ class StatsController {
             const { limit = 10 } = req.query;
             const recentBooks = await Book.findAll({
                 where: { isDeleted: false },
+                include: [
+                    { model: Category, as: 'Category', attributes: ['id', 'name'] },
+                    { model: Author, as: 'Authors', attributes: ['id', 'name'], through: { attributes: [] } },
+                ],
+                attributes: {
+                    include: [
+                        [literal('(SELECT ROUND(AVG(r.rating)::numeric, 1) FROM reviews r WHERE r.book_id = "Book".id AND r.is_deleted = false)'), 'averageRating'],
+                        [literal('(SELECT COUNT(*) FROM reviews r WHERE r.book_id = "Book".id AND r.is_deleted = false)'), 'reviewCount'],
+                    ],
+                },
                 order: [["created_at", "DESC"]],
                 limit: parseInt(limit),
-                attributes: ["id", "title", "isbn", "coverUrl", "created_at"],
+                distinct: true,
+                subQuery: false,
             });
             return ResponseFormatter.success(res, { recentBooks });
         } catch (error) {

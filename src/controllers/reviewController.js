@@ -136,14 +136,16 @@ class ReviewController {
       await review.save();
 
       const full = await Review.findByPk(review.id, {
-        include: [{ model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'username', 'avatar'] }],
+        include: [
+          { model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'username', 'avatar'] },
+          { model: Book, as: 'Book', attributes: ['id', 'title'] },
+        ],
       });
 
       // Real-time: notify admin
-      const book = await Book.findByPk(review.bookId, { attributes: ['title'] });
       emitToAdmin(EVENTS.REVIEW_UPDATED, {
         review: full,
-        bookTitle: book?.title ?? 'Unknown',
+        bookTitle: full?.Book?.title ?? 'Unknown',
         userName: full?.User ? `${full.User.firstName} ${full.User.lastName}` : 'A member',
       });
 

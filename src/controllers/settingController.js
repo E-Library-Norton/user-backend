@@ -33,7 +33,7 @@ class SettingController {
             const settingsData = req.body; // Expecting { key: value, ... }
             const keys = Object.keys(settingsData);
 
-            for (const key of keys) {
+            const records = keys.map(key => {
                 let value = settingsData[key];
                 let type = "string";
 
@@ -48,13 +48,12 @@ class SettingController {
                     type = "number";
                 }
 
-                await Setting.upsert({
-                    key,
-                    value,
-                    type,
-                    group: req.query.group || "general"
-                });
-            }
+                return { key, value, type, group: req.query.group || "general" };
+            });
+
+            await Setting.bulkCreate(records, {
+                updateOnDuplicate: ['value', 'type', 'group', 'updated_at'],
+            });
 
             return ResponseFormatter.success(res, null, "Settings updated successfully");
         } catch (err) {

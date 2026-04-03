@@ -58,20 +58,20 @@ const PublishersBooks = sequelize.define('PublishersBooks', {
 // Associations
 
 // RBAC
-User.belongsToMany(Role, { through: UsersRoles, foreignKey: 'user_id', otherKey: 'role_id', as: 'Roles' });
-Role.belongsToMany(User, { through: UsersRoles, foreignKey: 'role_id', otherKey: 'user_id', as: 'Users' });
+User.belongsToMany(Role, { through: UsersRoles, foreignKey: 'user_id', otherKey: 'role_id', as: 'Roles', onDelete: 'CASCADE' });
+Role.belongsToMany(User, { through: UsersRoles, foreignKey: 'role_id', otherKey: 'user_id', as: 'Users', onDelete: 'CASCADE' });
 
-Role.belongsToMany(Permission, { through: RolesPermissions, foreignKey: 'role_id', otherKey: 'permission_id', as: 'Permissions' });
-Permission.belongsToMany(Role, { through: RolesPermissions, foreignKey: 'permission_id', otherKey: 'role_id', as: 'Roles' });
+Role.belongsToMany(Permission, { through: RolesPermissions, foreignKey: 'role_id', otherKey: 'permission_id', as: 'Permissions', onDelete: 'CASCADE' });
+Permission.belongsToMany(Role, { through: RolesPermissions, foreignKey: 'permission_id', otherKey: 'role_id', as: 'Roles', onDelete: 'CASCADE' });
 
-User.belongsToMany(Permission, { through: UsersPermissions, foreignKey: 'user_id', otherKey: 'permission_id', as: 'Permissions' });
-Permission.belongsToMany(User, { through: UsersPermissions, foreignKey: 'permission_id', otherKey: 'user_id', as: 'Users' });
+User.belongsToMany(Permission, { through: UsersPermissions, foreignKey: 'user_id', otherKey: 'permission_id', as: 'Permissions', onDelete: 'CASCADE' });
+Permission.belongsToMany(User, { through: UsersPermissions, foreignKey: 'permission_id', otherKey: 'user_id', as: 'Users', onDelete: 'CASCADE' });
 
 // Book FKs
-Book.belongsTo(Category, { foreignKey: 'category_id', as: 'Category' });
-Book.belongsTo(Publisher, { foreignKey: 'publisher_id', as: 'Publisher' });
-Book.belongsTo(Department, { foreignKey: 'department_id', as: 'Department' });
-Book.belongsTo(MaterialType, { foreignKey: 'type_id', as: 'MaterialType' });
+Book.belongsTo(Category, { foreignKey: 'category_id', as: 'Category', onDelete: 'SET NULL', onUpdate: 'CASCADE' });
+Book.belongsTo(Publisher, { foreignKey: 'publisher_id', as: 'Publisher', onDelete: 'SET NULL', onUpdate: 'CASCADE' });
+Book.belongsTo(Department, { foreignKey: 'department_id', as: 'Department', onDelete: 'SET NULL', onUpdate: 'CASCADE' });
+Book.belongsTo(MaterialType, { foreignKey: 'type_id', as: 'MaterialType', onDelete: 'SET NULL', onUpdate: 'CASCADE' });
 
 Category.hasMany(Book, { foreignKey: 'category_id', as: 'Books' });
 Publisher.hasMany(Book, { foreignKey: 'publisher_id', as: 'Books' });
@@ -79,35 +79,35 @@ Department.hasMany(Book, { foreignKey: 'department_id', as: 'Books' });
 MaterialType.hasMany(Book, { foreignKey: 'type_id', as: 'Books' });
 
 // Book ↔ Author
-Book.belongsToMany(Author, { through: BookAuthor, foreignKey: 'book_id', otherKey: 'author_id', as: 'Authors' });
-Author.belongsToMany(Book, { through: BookAuthor, foreignKey: 'author_id', otherKey: 'book_id', as: 'Books' });
+Book.belongsToMany(Author, { through: BookAuthor, foreignKey: 'book_id', otherKey: 'author_id', as: 'Authors', onDelete: 'CASCADE' });
+Author.belongsToMany(Book, { through: BookAuthor, foreignKey: 'author_id', otherKey: 'book_id', as: 'Books', onDelete: 'CASCADE' });
 
 // Book ↔ Editor
-Book.belongsToMany(Editor, { through: BookEditor, foreignKey: 'book_id', otherKey: 'editor_id', as: 'Editors' });
-Editor.belongsToMany(Book, { through: BookEditor, foreignKey: 'editor_id', otherKey: 'book_id', as: 'Books' });
+Book.belongsToMany(Editor, { through: BookEditor, foreignKey: 'book_id', otherKey: 'editor_id', as: 'Editors', onDelete: 'CASCADE' });
+Editor.belongsToMany(Book, { through: BookEditor, foreignKey: 'editor_id', otherKey: 'book_id', as: 'Books', onDelete: 'CASCADE' });
 
 // Book ↔ Publisher (publishers_books)
-Book.belongsToMany(Publisher, { through: PublishersBooks, foreignKey: 'book_id', otherKey: 'publisher_id', as: 'Publishers' });
-Publisher.belongsToMany(Book, { through: PublishersBooks, foreignKey: 'publisher_id', otherKey: 'book_id', as: 'PublishedBooks' });
+Book.belongsToMany(Publisher, { through: PublishersBooks, foreignKey: 'book_id', otherKey: 'publisher_id', as: 'Publishers', onDelete: 'CASCADE' });
+Publisher.belongsToMany(Book, { through: PublishersBooks, foreignKey: 'publisher_id', otherKey: 'book_id', as: 'PublishedBooks', onDelete: 'CASCADE' });
 
 // Downloads
-Download.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
-Download.belongsTo(Book, { foreignKey: 'book_id', as: 'Book' });
+Download.belongsTo(User, { foreignKey: 'user_id', as: 'User', onDelete: 'CASCADE' });
+Download.belongsTo(Book, { foreignKey: 'book_id', as: 'Book', onDelete: 'CASCADE' });
 User.hasMany(Download, { foreignKey: 'user_id', as: 'Downloads' });
 Book.hasMany(Download, { foreignKey: 'book_id', as: 'Downloads' });
 
 // Activities
-Activity.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
+Activity.belongsTo(User, { foreignKey: 'user_id', as: 'User', onDelete: 'SET NULL' });
 User.hasMany(Activity, { foreignKey: 'user_id', as: 'Activities' });
 
 // Reviews
-Review.belongsTo(Book, { foreignKey: 'book_id', as: 'Book' });
-Review.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
+Review.belongsTo(Book, { foreignKey: 'book_id', as: 'Book', onDelete: 'CASCADE' });
+Review.belongsTo(User, { foreignKey: 'user_id', as: 'User', onDelete: 'CASCADE' });
 Book.hasMany(Review, { foreignKey: 'book_id', as: 'Reviews' });
 User.hasMany(Review, { foreignKey: 'user_id', as: 'Reviews' });
 
 // PushSubscriptions
-PushSubscription.belongsTo(User, { foreignKey: 'user_id', as: 'User' });
+PushSubscription.belongsTo(User, { foreignKey: 'user_id', as: 'User', onDelete: 'CASCADE' });
 User.hasMany(PushSubscription, { foreignKey: 'user_id', as: 'PushSubscriptions' });
 
 // ── Exports 
@@ -116,5 +116,5 @@ module.exports = {
   User, Role, Permission, Setting, Activity,
   Book, Author, Editor, Category, Publisher, MaterialType, Department, Download,
   Review, PushSubscription,
-  BookAuthor, BookEditor,
+  BookAuthor, BookEditor, PublishersBooks,
 };
