@@ -54,6 +54,35 @@ function getIO() {
   return _io;
 }
 
+// ── Emit helpers (prevent duplicate delivery) ────────────────────────────────
+
+/**
+ * Emit to the 'admin' room only.
+ */
+function emitToAdmin(event, payload) {
+  try { _io?.to('admin').emit(event, payload); } catch { /* ignore */ }
+}
+
+/**
+ * Emit to everyone EXCEPT the 'admin' room.
+ * Useful for public events that admins also get via emitToAdmin.
+ */
+function emitExceptAdmin(event, payload) {
+  try { _io?.except('admin').emit(event, payload); } catch { /* ignore */ }
+}
+
+/**
+ * Broadcast to ALL sockets without duplication:
+ *  - admin room gets `adminPayload ?? payload`
+ *  - non-admin sockets get `payload`
+ * This replaces the old pattern of calling emitToAdmin + io.emit which
+ * caused admin sockets to receive the event twice.
+ */
+function emitBroadcast(event, payload, adminPayload) {
+  emitToAdmin(event, adminPayload ?? payload);
+  emitExceptAdmin(event, payload);
+}
+
 // ── Event name constants (single source of truth) ────────────────────────────
 
 /** Emitted to the 'admin' room whenever any CRUD activity is logged */
@@ -69,4 +98,4 @@ const EVENTS = {
   NOTIFICATION_NEW:  'notification:new',   // { title, body, url }
 };
 
-module.exports = { initSocket, getIO, EVENTS };
+module.exports = { initSocket, getIO, EVENTS, emitToAdmin, emitExceptAdmin, emitBroadcast };

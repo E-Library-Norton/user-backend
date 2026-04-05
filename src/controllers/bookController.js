@@ -6,17 +6,8 @@ const { ValidationError, NotFoundError, ConflictError } = require('../utils/erro
 const { logActivity } = require('../utils/activityLogger');
 const { uploadToR2 } = require('../utils/cloudR2Upload');
 const { scanBookCover, syncBookCover, deleteBookCover } = require('../utils/vectorSearchService');
-const { getIO, EVENTS } = require('../utils/socket');
+const { EVENTS, emitToAdmin, emitBroadcast } = require('../utils/socket');
 const { broadcastNotification } = require('../utils/pushNotification');
-
-// ── Helper: safely emit to admin room without crashing if Socket not ready ────
-function emitToAdmin(event, payload) {
-  try { getIO().to('admin').emit(event, payload); } catch { /* ignore */ }
-}
-// Also broadcast publicly so the student frontend receives book events
-function emitPublic(event, payload) {
-  try { getIO().emit(event, payload); } catch { /* ignore */ }
-}
 
 // ── Shared include for full book detail ───────────────────────────────────────
 const BOOK_INCLUDE = [
@@ -359,9 +350,8 @@ class BookController {
         targetType: 'book'
       });
 
-      // Real-time: notify admin room + public broadcast
-      emitToAdmin(EVENTS.BOOK_CREATED, { book: created });
-      emitPublic(EVENTS.BOOK_CREATED, { book: created });
+      // Real-time: broadcast to admin + public (no duplication)
+      emitBroadcast(EVENTS.BOOK_CREATED, { book: created });
 
       // Web Push: notify all subscribers of the new book
       broadcastNotification(
@@ -517,9 +507,8 @@ class BookController {
         targetType: 'book'
       });
 
-      // Real-time: notify admin room + public broadcast
-      emitToAdmin(EVENTS.BOOK_UPDATED, { book: updated });
-      emitPublic(EVENTS.BOOK_UPDATED, { book: updated });
+      // Real-time: broadcast to admin + public (no duplication)
+      emitBroadcast(EVENTS.BOOK_UPDATED, { book: updated });
 
       return ResponseFormatter.success(res, updated, 'Book updated successfully');
     } catch (err) { next(err); }
@@ -546,9 +535,8 @@ class BookController {
         targetType: 'book'
       });
 
-      // Real-time: notify admin room + public broadcast
-      emitToAdmin(EVENTS.BOOK_DELETED, { bookId: book.id });
-      emitPublic(EVENTS.BOOK_DELETED, { bookId: book.id });
+      // Real-time: broadcast to admin + public (no duplication)
+      emitBroadcast(EVENTS.BOOK_DELETED, { bookId: book.id });
 
       return ResponseFormatter.noContent(res, null, 'Book deleted successfully');
     } catch (err) { next(err); }

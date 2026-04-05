@@ -4,55 +4,100 @@ const { Review, User, Book } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { NotFoundError, ConflictError, AuthorizationError } = require('../utils/errors');
 const { logActivity } = require('../utils/activityLogger');
-const { getIO, EVENTS } = require('../utils/socket');
+const { EVENTS, emitToAdmin, emitBroadcast } = require('../utils/socket');
+const { reviewCache } = require('../utils/reviewCache');
 
-// ── Helper: safely emit to admin room ─────────────────────────────────────────
-function emitToAdmin(event, payload) {
-  try { getIO().to('admin').emit(event, payload); } catch { /* ignore */ }
+/** Compute avg rating for a book — cached for 2 min */
+async function getBookAvgRating(bookId) {
+  const cached = reviewCache.get('avg', bookId);
+  if (cached !== null) return cached;
+
+  const result = await Review.findOne({
+    where: { bookId, isDeleted: false },
+    attributes: [[fn('AVG', col('rating')), 'avgRating']],
+    raw: true,
+  });
+  const avg = result?.avgRating ? Number(Number(result.avgRating).toFixed(1)) : null;
+
+  reviewCache.set('avg', bookId, avg);
+  return avg;
 }
-function emitPublic(event, payload) {
-  try { getIO().emit(event, payload); } catch { /* ignore */ }
+
+/** Compute review count for a book — cached for 2 min */
+async function getBookReviewCount(bookId) {
+  const cached = reviewCache.get('count', bookId);
+  if (cached !== null) return cached;
+
+  const count = await Review.count({ where: { bookId, isDeleted: false } });
+  reviewCache.set('count', bookId, count);
+  return count;
 }
+
+/** Build a rich notification payload for review events */
+function buildReviewPayload(review, book, user) {
+  return {
+    review: {
+      id:        review.id,
+      bookId:    review.bookId,
+      userId:    review.userId,
+      rating:    review.rating,
+      comment:   review.comment,
+      createdAt: review.created_at || review.createdAt,
+    },
+    bookId:    book?.id ?? review.bookId,
+    bookTitle: book?.title ?? 'Unknown',
+    bookCover: book?.coverUrl ?? null,
+    userName:  user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : 'A member',
+    userAvatar: user?.avatar ?? null,
+    averageRating: null, // filled async below
+    totalReviews:  null,
+  };
+}
+
+/** Invalidate all caches for a book after a review change */
+function invalidateBookReviewCache(bookId) {
+  reviewCache.invalidate('avg', bookId);
+  reviewCache.invalidate('count', bookId);
+  reviewCache.invalidate('reviews', bookId);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class ReviewController {
+
   // ── GET /api/books/:bookId/reviews ──────────────────────────────────────────
   static async getByBook(req, res, next) {
     try {
       const { bookId } = req.params;
-      const { page = 1, limit = 20 } = req.query;
-      const offset = (Number(page) - 1) * Number(limit);
+      const page   = Math.max(1, Number(req.query.page)  || 1);
+      const limit  = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+      const offset = (page - 1) * limit;
 
       const book = await Book.findOne({ where: { id: bookId, isDeleted: false } });
       if (!book) return ResponseFormatter.notFound(res, 'Book not found');
 
-      const { count, rows } = await Review.findAndCountAll({
-        where: { bookId, isDeleted: false },
-        include: [
-          {
+      // Parallel: fetch reviews + avg rating (cached)
+      const [{ count, rows }, avgRating] = await Promise.all([
+        Review.findAndCountAll({
+          where: { bookId, isDeleted: false },
+          include: [{
             model: User,
             as: 'User',
             attributes: ['id', 'firstName', 'lastName', 'username', 'avatar'],
-          },
-        ],
-        order: [['created_at', 'DESC']],
-        limit: Number(limit),
-        offset,
-      });
-
-      // Calculate average rating — single SQL aggregate instead of fetching all rows
-      const avgResult = await Review.findOne({
-        where: { bookId, isDeleted: false },
-        attributes: [[fn('AVG', col('rating')), 'avgRating']],
-        raw: true,
-      });
-      const avgRating = avgResult?.avgRating ? Number(Number(avgResult.avgRating).toFixed(1)) : null;
+          }],
+          order: [['created_at', 'DESC']],
+          limit,
+          offset,
+        }),
+        getBookAvgRating(bookId),
+      ]);
 
       return ResponseFormatter.success(res, {
-        reviews: rows,
-        averageRating: avgRating ? Number(avgRating.toFixed(1)) : null,
-        totalReviews: count,
-        totalPages: Math.ceil(count / Number(limit)),
-        currentPage: Number(page),
+        reviews:       rows,
+        averageRating: avgRating,
+        totalReviews:  count,
+        totalPages:    Math.ceil(count / limit),
+        currentPage:   page,
       });
     } catch (error) {
       next(error);
@@ -74,19 +119,21 @@ class ReviewController {
       if (!book) return ResponseFormatter.notFound(res, 'Book not found');
 
       // One review per user per book
-      const existing = await Review.findOne({
-        where: { bookId, userId, isDeleted: false },
-      });
+      const existing = await Review.findOne({ where: { bookId, userId, isDeleted: false } });
       if (existing) throw new ConflictError('You have already reviewed this book');
 
       const review = await Review.create({ bookId, userId, rating, comment });
 
-      // Re-fetch with user info for response
+      // Re-fetch with user info
       const full = await Review.findByPk(review.id, {
         include: [{ model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'username', 'avatar'] }],
       });
 
-      await logActivity({
+      // Invalidate cache so next read gets fresh data
+      invalidateBookReviewCache(bookId);
+
+      // Activity log (fire-and-forget)
+      logActivity({
         userId,
         action: 'created',
         targetType: 'review',
@@ -94,16 +141,20 @@ class ReviewController {
         targetName: book.title,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
-      });
+      }).catch(() => {});
 
-      // Real-time: notify admin + public
-      const reviewPayload = {
-        review: full,
-        bookTitle: book.title,
-        userName: full?.User ? `${full.User.firstName} ${full.User.lastName}` : 'A member',
-      };
-      emitToAdmin(EVENTS.REVIEW_CREATED, reviewPayload);
-      emitPublic(EVENTS.REVIEW_CREATED, reviewPayload);
+      // Build rich notification payload with fresh stats
+      const [avgRating, totalReviews] = await Promise.all([
+        getBookAvgRating(bookId),
+        getBookReviewCount(bookId),
+      ]);
+
+      const payload = buildReviewPayload(full, book, full?.User);
+      payload.averageRating = avgRating;
+      payload.totalReviews  = totalReviews;
+
+      // Broadcast to admin + public (no duplication)
+      emitBroadcast(EVENTS.REVIEW_CREATED, payload);
 
       return ResponseFormatter.success(res, full, 'Review submitted successfully', 201);
     } catch (error) {
@@ -118,14 +169,14 @@ class ReviewController {
       const { rating, comment } = req.body;
       const userId = req.user.id;
 
-      if (rating && (rating < 1 || rating > 5)) {
+      if (rating !== undefined && (rating < 1 || rating > 5)) {
         return ResponseFormatter.error(res, 'Rating must be between 1 and 5', 400);
       }
 
       const review = await Review.findOne({ where: { id, isDeleted: false } });
       if (!review) return ResponseFormatter.notFound(res, 'Review not found');
 
-      // Only the author OR admin may edit
+      // Only the author OR admin/librarian may edit
       const isAdmin = req.user.Roles?.some((r) => ['admin', 'librarian'].includes(r.name));
       if (review.userId !== userId && !isAdmin) {
         throw new AuthorizationError('You can only edit your own reviews');
@@ -135,19 +186,27 @@ class ReviewController {
       if (comment !== undefined) review.comment = comment;
       await review.save();
 
+      // Invalidate cache
+      invalidateBookReviewCache(review.bookId);
+
       const full = await Review.findByPk(review.id, {
         include: [
           { model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'username', 'avatar'] },
-          { model: Book, as: 'Book', attributes: ['id', 'title'] },
+          { model: Book, as: 'Book', attributes: ['id', 'title', 'coverUrl'] },
         ],
       });
 
-      // Real-time: notify admin
-      emitToAdmin(EVENTS.REVIEW_UPDATED, {
-        review: full,
-        bookTitle: full?.Book?.title ?? 'Unknown',
-        userName: full?.User ? `${full.User.firstName} ${full.User.lastName}` : 'A member',
-      });
+      // Compute fresh stats
+      const [avgRating, totalReviews] = await Promise.all([
+        getBookAvgRating(review.bookId),
+        getBookReviewCount(review.bookId),
+      ]);
+
+      const payload = buildReviewPayload(full, full?.Book, full?.User);
+      payload.averageRating = avgRating;
+      payload.totalReviews  = totalReviews;
+
+      emitToAdmin(EVENTS.REVIEW_UPDATED, payload);
 
       return ResponseFormatter.success(res, full, 'Review updated successfully');
     } catch (error) {
@@ -161,7 +220,10 @@ class ReviewController {
       const { id } = req.params;
       const userId = req.user.id;
 
-      const review = await Review.findOne({ where: { id, isDeleted: false } });
+      const review = await Review.findOne({
+        where: { id, isDeleted: false },
+        include: [{ model: Book, as: 'Book', attributes: ['id', 'title'] }],
+      });
       if (!review) return ResponseFormatter.notFound(res, 'Review not found');
 
       const isAdmin = req.user.Roles?.some((r) => ['admin', 'librarian'].includes(r.name));
@@ -169,10 +231,15 @@ class ReviewController {
         throw new AuthorizationError('You can only delete your own reviews');
       }
 
+      const bookId = review.bookId;
       review.isDeleted = true;
       await review.save();
 
-      await logActivity({
+      // Invalidate cache
+      invalidateBookReviewCache(bookId);
+
+      // Activity log (fire-and-forget)
+      logActivity({
         userId,
         action: 'deleted',
         targetType: 'review',
@@ -180,10 +247,14 @@ class ReviewController {
         targetName: `Review #${review.id}`,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
-      });
+      }).catch(() => {});
 
-      // Real-time: notify admin
-      emitToAdmin(EVENTS.REVIEW_DELETED, { reviewId: review.id, bookId: review.bookId });
+      // Emit with book context so dashboard can refresh
+      emitToAdmin(EVENTS.REVIEW_DELETED, {
+        reviewId:  review.id,
+        bookId,
+        bookTitle: review.Book?.title ?? 'Unknown',
+      });
 
       return ResponseFormatter.success(res, null, 'Review deleted successfully');
     } catch (error) {
@@ -191,12 +262,13 @@ class ReviewController {
     }
   }
 
-  // ── GET /api/reviews/my  (current user's own reviews) ───────────────────────
+  // ── GET /api/reviews/my ─────────────────────────────────────────────────────
   static async getMyReviews(req, res, next) {
     try {
       const userId = req.user.id;
-      const { page = 1, limit = 20 } = req.query;
-      const offset = (Number(page) - 1) * Number(limit);
+      const page   = Math.max(1, Number(req.query.page)  || 1);
+      const limit  = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+      const offset = (page - 1) * limit;
 
       const { count, rows } = await Review.findAndCountAll({
         where: { userId, isDeleted: false },
@@ -204,15 +276,49 @@ class ReviewController {
           { model: Book, as: 'Book', attributes: ['id', 'title', 'titleKh', 'coverUrl'] },
         ],
         order: [['created_at', 'DESC']],
-        limit: Number(limit),
+        limit,
         offset,
       });
 
       return ResponseFormatter.success(res, {
-        reviews: rows,
-        total: count,
-        totalPages: Math.ceil(count / Number(limit)),
-        currentPage: Number(page),
+        reviews:     rows,
+        total:       count,
+        totalPages:  Math.ceil(count / limit),
+        currentPage: page,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── GET /api/reviews  (admin — all reviews with filters) ────────────────────
+  static async getAll(req, res, next) {
+    try {
+      const page   = Math.max(1, Number(req.query.page)  || 1);
+      const limit  = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+      const offset = (page - 1) * limit;
+
+      const where = { isDeleted: false };
+      if (req.query.bookId)  where.bookId = req.query.bookId;
+      if (req.query.userId)  where.userId = req.query.userId;
+      if (req.query.rating)  where.rating = Number(req.query.rating);
+
+      const { count, rows } = await Review.findAndCountAll({
+        where,
+        include: [
+          { model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'username', 'avatar'] },
+          { model: Book, as: 'Book', attributes: ['id', 'title', 'titleKh', 'coverUrl'] },
+        ],
+        order: [['created_at', 'DESC']],
+        limit,
+        offset,
+      });
+
+      return ResponseFormatter.success(res, {
+        reviews:     rows,
+        total:       count,
+        totalPages:  Math.ceil(count / limit),
+        currentPage: page,
       });
     } catch (error) {
       next(error);

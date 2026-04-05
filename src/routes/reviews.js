@@ -3,22 +3,19 @@ const router           = require('express').Router();
 const ReviewController = require('../controllers/reviewController');
 const { authenticate, authorize } = require('../middleware/auth');
 
-// ── Nested under /books/:bookId ──────────────────────────────────────────────
-// GET  /api/books/:bookId/reviews       — public
-// POST /api/books/:bookId/reviews       — authenticated users only
+// ── Admin — list all reviews with filters ────────────────────────────────────
+// GET /api/reviews?page=1&limit=20&bookId=&userId=&rating=
+router.get('/', authenticate, authorize('admin', 'librarian'), ReviewController.getAll);
 
-// ── Stand-alone review routes ────────────────────────────────────────────────
-// GET    /api/reviews/my               — authenticated user's own reviews
-// PUT    /api/reviews/:id              — owner or admin
-// DELETE /api/reviews/:id              — owner or admin
-
-// Stand-alone
+// ── Authenticated user's own reviews ─────────────────────────────────────────
 router.get('/my', authenticate, ReviewController.getMyReviews);
+
+// ── Owner or admin ───────────────────────────────────────────────────────────
 router.put('/:id', authenticate, ReviewController.update);
 router.delete('/:id', authenticate, ReviewController.delete);
 
 // ── Export nested handler for books router ────────────────────────────────────
-// These are mounted inside books.js as /api/books/:bookId/reviews
+// Mounted inside books.js as /api/books/:bookId/reviews
 ReviewController.getByBook = ReviewController.getByBook;
 
 module.exports = router;
