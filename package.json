@@ -29,7 +29,13 @@
     "db:migrate:undo:all": "npx sequelize-cli db:migrate:undo:all",
     "db:migrate:status": "npx sequelize-cli db:migrate:status",
     "db:seed": "npx sequelize-cli db:seed:all",
-    "db:seed:undo": "npx sequelize-cli db:seed:undo:all"
+    "db:seed:undo": "npx sequelize-cli db:seed:undo:all",
+    "db:seed:permissions": "node seed_permissions.js",
+    "docker:build": "docker compose --env-file .env.docker build",
+    "docker:up": "docker compose --env-file .env.docker up -d",
+    "docker:down": "docker compose --env-file .env.docker down",
+    "docker:logs": "docker compose --env-file .env.docker logs -f api",
+    "docker:clean": "docker compose --env-file .env.docker down -v --rmi local"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1015.0",

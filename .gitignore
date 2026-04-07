@@ -6,8 +6,9 @@ build/
 # Environment secrets (CRITICAL)
 .env*
 
-# Allow the example file
+# Allow the example files
 !.env.example
+!.env.docker.example
 
 # Logs and Debugging
 npm-debug.log*

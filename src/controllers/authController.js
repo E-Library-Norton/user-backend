@@ -4,7 +4,7 @@ const { User, Role }    = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, AuthenticationError, NotFoundError } = require('../utils/errors');
 const { logActivity }   = require('../utils/activityLogger');
-const { uploadToCloudinary, extractKeyFromUrl } = require('../utils/cloudR2Upload');
+const { uploadToR2, extractKeyFromUrl } = require('../utils/cloudR2Upload');
 const { sendOtpEmail } = require('../utils/emailService');
 const r2 = require('../config/r2');
 const { GetObjectCommand } = require('@aws-sdk/client-s3');
@@ -156,7 +156,7 @@ class AuthController {
       const user = await User.findByPk(req.user.id);
       if (!user) throw new NotFoundError('User not found');
 
-      const result = await uploadToCloudinary(req.file, 'avatar');
+      const result = await uploadToR2(req.file, 'avatar');
       await user.update({ avatar: result.secure_url });
 
       return ResponseFormatter.success(res, { avatar: result.secure_url }, 'Avatar updated successfully');

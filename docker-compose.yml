@@ -1,0 +1,112 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Norton E-Library — Docker Compose
+# Backend API (Node.js) + PostgreSQL 16
+#
+# Usage:
+#   cp .env.example .env.docker    # fill in your secrets
+#   docker compose up -d           # start both services
+#   docker compose logs -f api     # tail API logs
+#   docker compose down            # stop everything
+#   docker compose down -v         # stop + remove DB volume (data loss!)
+# ══════════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ── PostgreSQL 16 ──────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: elibrary-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-elibrary}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-elibrary_secret}
+      POSTGRES_DB:       ${POSTGRES_DB:-nu_elibrary_db}
+    ports:
+      - "${DB_PORT_EXTERNAL:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-elibrary} -d ${POSTGRES_DB:-nu_elibrary_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - elibrary-net
+
+  # ── Backend API (Node.js + Express) ────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: elibrary-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${PORT:-5005}:5005"
+    environment:
+      NODE_ENV:                production
+      PORT:                    5005
+
+      # ── Database (connects to the 'db' service via Docker network) ──────
+      # For local Docker: use this internal connection (no SSL needed)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-elibrary}:${POSTGRES_PASSWORD:-elibrary_secret}@db:5432/${POSTGRES_DB:-nu_elibrary_db}
+
+      # Set to "false" for local Docker (no SSL between containers)
+      # Set to "true" for Render managed DB or any external SSL DB
+      DB_SSL:                  ${DB_SSL:-false}
+
+      # ── Auth secrets ────────────────────────────────────────────────────
+      ACCESS_TOKEN_SECRET:     ${ACCESS_TOKEN_SECRET}
+      ACCESS_TOKEN_EXPIRES_IN: ${ACCESS_TOKEN_EXPIRES_IN:-30d}
+      REFRESH_TOKEN_SECRET:    ${REFRESH_TOKEN_SECRET}
+      REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-60d}
+      FORGOT_PASSWORD_SECRET:  ${FORGOT_PASSWORD_SECRET:-}
+
+      # ── Cloudflare R2 ──────────────────────────────────────────────────
+      R2_ACCESS_KEY:           ${R2_ACCESS_KEY}
+      R2_SECRET_KEY:           ${R2_SECRET_KEY}
+      R2_BUCKET:               ${R2_BUCKET:-elibrary-files}
+      R2_ENDPOINT:             ${R2_ENDPOINT}
+      R2_PUBLIC_URL:           ${R2_PUBLIC_URL:-}
+
+      # ── Email (SMTP) ───────────────────────────────────────────────────
+      EMAIL_HOST:              ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT:              ${EMAIL_PORT:-465}
+      EMAIL_SECURE:            ${EMAIL_SECURE:-true}
+      EMAIL_USER:              ${EMAIL_USER}
+      EMAIL_PASS:              ${EMAIL_PASS}
+
+      # ── Google AI ──────────────────────────────────────────────────────
+      GOOGLE_AI_API_KEY:       ${GOOGLE_AI_API_KEY}
+
+      # ── Vector Search ──────────────────────────────────────────────────
+      VECTOR_SEARCH_SERVICE_URL: ${VECTOR_SEARCH_SERVICE_URL:-}
+
+      # ── Web Push (VAPID) ───────────────────────────────────────────────
+      VAPID_PUBLIC_KEY:        ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY:       ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT:           ${VAPID_SUBJECT:-}
+
+    volumes:
+      # Persist uploaded files across container restarts
+      - uploads:/app/uploads
+      - logs:/app/logs
+    networks:
+      - elibrary-net
+
+# ── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  pgdata:
+    driver: local
+  uploads:
+    driver: local
+  logs:
+    driver: local
+
+# ── Network ──────────────────────────────────────────────────────────────────
+networks:
+  elibrary-net:
+    driver: bridge
