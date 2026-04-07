@@ -94,6 +94,7 @@ services:
       # Persist uploaded files across container restarts
       - uploads:/app/uploads
       - logs:/app/logs
+      - backups:/app/backups
     networks:
       - elibrary-net
 
@@ -104,6 +105,8 @@ volumes:
   uploads:
     driver: local
   logs:
+    driver: local
+  backups:
     driver: local
 
 # ── Network ──────────────────────────────────────────────────────────────────
