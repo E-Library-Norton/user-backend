@@ -38,7 +38,14 @@
     "docker:up": "docker compose --env-file .env.docker up -d",
     "docker:down": "docker compose --env-file .env.docker down",
     "docker:logs": "docker compose --env-file .env.docker logs -f api",
-    "docker:clean": "docker compose --env-file .env.docker down -v --rmi local"
+    "docker:clean": "docker compose --env-file .env.docker down -v --rmi local",
+    "health": "./scripts/health-check.sh",
+    "health:json": "./scripts/health-check.sh --json",
+    "monitor": "./scripts/monitor-prod.sh",
+    "monitor:loop": "./scripts/monitor-prod.sh --loop",
+    "monitor:report": "./scripts/monitor-prod.sh --report",
+    "db:perf": "psql \"$DATABASE_URL\" -f scripts/db-perf-check.sql",
+    "db:cleanup-indexes": "psql \"$DATABASE_URL\" -f scripts/cleanup-duplicate-indexes.sql"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1015.0",

@@ -9,7 +9,7 @@ const { logActivity } = require("../utils/activityLogger");
 const r2 = require('../config/r2');
 const { GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-const { extractKeyFromUrl } = require('../utils/cloudR2Upload');
+const { extractKeyFromUrl, uploadToR2 } = require('../utils/cloudR2Upload');
 
 class UserController {
 
@@ -280,6 +280,35 @@ class UserController {
       res.set('Cache-Control', 'public, max-age=600');
       return res.redirect(302, signedUrl);
     } catch (err) { next(err); }
+  }
+
+  // ── POST /api/users/:id/avatar  (admin: upload/replace any user's avatar) ──
+  static async uploadAvatarById(req, res, next) {
+    try {
+      const user = await User.findByPk(req.params.id);
+      if (!user) throw new NotFoundError('User not found');
+
+      if (!req.file) {
+        return ResponseFormatter.error(res, 'No file provided', 400, 'BAD_REQUEST');
+      }
+
+      const result = await uploadToR2(req.file, 'avatar');
+      await user.update({ avatar: result.secure_url });
+
+      await logActivity({
+        userId: req.user.id,
+        action: 'updated',
+        targetType: 'user',
+        targetId: user.id,
+        targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+
+      return ResponseFormatter.success(res, { avatar: result.secure_url }, 'Avatar updated successfully');
+    } catch (err) {
+      next(err);
+    }
   }
 }
 

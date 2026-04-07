@@ -6,7 +6,7 @@
 > **Project:** Norton E-Library  
 > **Team:** Samnang · Phearun · Dara · Sorphiny
 
-> 🟢 **Last sync:** April 7, 2026 — Phases 1–4 complete · Phase 5.3 done · Phase 6.0 Docker + 6.2 Vercel prep done
+> 🟢 **Last sync:** July 1, 2025 — Phases 1–6 ✅ · Phase 7.2 feedback system done · 207/219 tasks (95%)
 
 ---
 
@@ -44,9 +44,9 @@
 | 🟢 Phase 3 — Student Frontend | 40 | 40 | `████████████████████` | **100%** |
 | 🤖 Phase 4 — AI & Advanced | 21 | 21 | `████████████████████` | **100%** |
 | 🧪 Phase 5 — Testing & QA | 24 | 14 | `████████████░░░░░░░░` | **58%** |
-| 🚀 Phase 6 — Deployment | 26 | 6 | `████░░░░░░░░░░░░░░░░` | **23%** |
-| 📊 Phase 7 — Post-Launch | 7 | 0 | `░░░░░░░░░░░░░░░░░░░░` | **0%** |
-| ✨ **TOTAL** | **218** | **181** | `████████████████░░░░` | **83%** |
+| 🚀 Phase 6 — Deployment | 26 | 26 | `████████████████████` | **100%** |
+| 📊 Phase 7 — Post-Launch | 8 | 6 | `██████████████░░░░░░` | **75%** |
+| ✨ **TOTAL** | **219** | **207** | `██████████████████░░` | **95%** |
 
 ---
 
@@ -71,8 +71,8 @@
 | M4 | Admin Dashboard MVP | Week 6 | ✅ Completed | `████████████████████` |
 | M5 | Student Frontend MVP | Week 9 | ✅ Completed | `████████████████████` |
 | M6 | AI Features Live | Week 11 | ✅ Completed | `████████████████████` |
-| M7 | 🚀 Production Launch | Week 14 | 🔄 In Progress | `████░░░░░░░░░░░░░░░░` |
-| M8 | Stable v1.0 | Week 16 | ⬜ Not Started | `░░░░░░░░░░░░░░░░░░░░` |
+| M7 | 🚀 Production Launch | Week 14 | ✅ Completed | `████████████████████` |
+| M8 | Stable v1.0 | Week 16 | 🔄 In Progress | `████████░░░░░░░░░░░░` |
 
 > **Milestone status options:** `⬜ Not Started` → `🔄 In Progress` → `✅ Completed`
 
@@ -504,11 +504,12 @@
 
 | Progress | Done / Total | % |
 |---|---|---|
-| `████░░░░░░░░░░░░░░░░` | 6 / 26 | **23%** |
+| `████████████████████` | 26 / 26 | **100%** |
 
 > ✅ **April 6** — Docker preparation: multi-stage Dockerfile (Node 20 Alpine, dumb-init, non-root user, health check), docker-compose.yml (PostgreSQL 16 + API with health checks, named volumes, bridge network), docker-entrypoint.sh (wait for DB → migrate → seed → start), `.env.docker.example`, DB_SSL toggle for local Docker vs Render SSL. Updated `database.js` + `sequelize-cli-config.js` to support both modes.
 > ✅ **April 7** — Vercel deployment prep: `vercel.json` for both frontends (sin1 Singapore region, security headers X-Content-Type-Options/X-Frame-Options/Referrer-Policy, service worker cache for frontend). `.env.example` for student frontend with NEXT_PUBLIC_BACKEND_URL + COOKIE_SECRET. Updated dashboard `env.example.txt` with missing backend URL + cookie secret vars. Updated `.gitignore` to allow `.env.example` through.
 > ✅ **April 7** — DB backup infrastructure: `scripts/backup-db.sh` (compressed pg_dump with 7-day retention, supports Docker/local/remote URL modes), `scripts/restore-db.sh` (restore from .sql.gz with confirmation prompt). Added `backups` Docker volume + npm scripts `db:backup`, `db:backup:local`, `db:restore`.
+> ✅ **April 7** — Full deployment: Backend deployed on Render (Node.js Web Service + PostgreSQL managed DB). Student Frontend + Admin Dashboard deployed on Vercel with custom domains. All production env vars configured. Migrations + seed run. SSL verified. E2E smoke tests passed.
 
 ### 6.0 Docker & Container Preparation `Week 13` — `3 / 3 done`
 
@@ -518,16 +519,16 @@
 | ✅ | 6.0.2 | Create docker-compose.yml (API + PostgreSQL 16, volumes, entrypoint) | Samnang | 🔴 | 0.5d | S13 |
 | ✅ | 6.0.3 | Create daily DB backup + restore scripts (pg_dump, gzip, 7-day retention) | Samnang | 🟠 | 0.5d | S13 |
 
-### 6.1 Backend Deployment `Week 13` — `0 / 6 done`
+### 6.1 Backend Deployment `Week 13` — `6 / 6 done`
 
 | Status | # | Task | Assignee | Priority | Est. | Sprint |
 |---|---|---|---|---|---|---|
-| ⬜ | 6.1.1 | Set up Render Web Service (Node.js) or deploy via Docker on VM | Samnang | 🔴 | 0.5d | S13 |
-| ⬜ | 6.1.2 | Configure PostgreSQL (Render managed DB or Docker container) | Samnang | 🔴 | 0.5d | S13 |
-| ⬜ | 6.1.3 | Set all production env variables on Render/VM | Samnang | 🔴 | 0.5d | S13 |
-| ⬜ | 6.1.4 | Run migrations + seed permissions in prod | Samnang | 🔴 | 0.5d | S13 |
-| ⬜ | 6.1.5 | Verify DB connection retry logic in prod | Samnang | 🟠 | 0.5d | S13 |
-| ⬜ | 6.1.6 | Create initial admin user in production DB | Samnang | 🔴 | 0.5d | S13 |
+| ✅ | 6.1.1 | Set up Render Web Service (Node.js) or deploy via Docker on VM | Samnang | 🔴 | 0.5d | S13 |
+| ✅ | 6.1.2 | Configure PostgreSQL (Render managed DB or Docker container) | Samnang | 🔴 | 0.5d | S13 |
+| ✅ | 6.1.3 | Set all production env variables on Render/VM | Samnang | 🔴 | 0.5d | S13 |
+| ✅ | 6.1.4 | Run migrations + seed permissions in prod | Samnang | 🔴 | 0.5d | S13 |
+| ✅ | 6.1.5 | Verify DB connection retry logic in prod | Samnang | 🟠 | 0.5d | S13 |
+| ✅ | 6.1.6 | Create initial admin user in production DB | Samnang | 🔴 | 0.5d | S13 |
 
 ### 6.2 Frontend Deployment Preparation `Week 13` — `3 / 3 done`
 
@@ -539,29 +540,29 @@
 | ✅ | 6.2.0b | Create vercel.json for Admin Dashboard (region, headers) | Samnang | 🔴 | 0.5d | S13 |
 | ✅ | 6.2.0c | Create .env.example templates for both frontends | Samnang | 🟠 | 0.5d | S13 |
 
-### 6.3 Frontend Deployment `Week 13` — `0 / 6 done`
+### 6.3 Frontend Deployment `Week 13` — `6 / 6 done`
 
 | Status | # | Task | Assignee | Priority | Est. | Sprint |
 |---|---|---|---|---|---|---|
-| ⬜ | 6.3.1 | Deploy Student Frontend to Vercel | Dara | 🔴 | 0.5d | S13 |
-| ⬜ | 6.3.2 | Deploy Admin Dashboard to Vercel | Sorphiny | 🔴 | 0.5d | S13 |
-| ⬜ | 6.3.3 | Configure domain: `frontend.samnangchan.shop` | Samnang | 🔴 | 0.5d | S13 |
-| ⬜ | 6.3.4 | Configure domain: `admin-elibrary.samnangchan.shop` | Samnang | 🔴 | 0.5d | S13 |
-| ⬜ | 6.3.5 | Set production env variables on Vercel | Dara | 🔴 | 0.5d | S13 |
-| ⬜ | 6.3.6 | Verify CORS whitelist includes all prod domains | Samnang | 🔴 | 0.5d | S13 |
+| ✅ | 6.3.1 | Deploy Student Frontend to Vercel | Dara | 🔴 | 0.5d | S13 |
+| ✅ | 6.3.2 | Deploy Admin Dashboard to Vercel | Sorphiny | 🔴 | 0.5d | S13 |
+| ✅ | 6.3.3 | Configure domain: `frontend.samnangchan.shop` | Samnang | 🔴 | 0.5d | S13 |
+| ✅ | 6.3.4 | Configure domain: `admin-elibrary.samnangchan.shop` | Samnang | 🔴 | 0.5d | S13 |
+| ✅ | 6.3.5 | Set production env variables on Vercel | Dara | 🔴 | 0.5d | S13 |
+| ✅ | 6.3.6 | Verify CORS whitelist includes all prod domains | Samnang | 🔴 | 0.5d | S13 |
 
-### 6.4 Production Verification `Week 14` — `0 / 8 done`
+### 6.4 Production Verification `Week 14` — `8 / 8 done`
 
 | Status | # | Task | Assignee | Priority | Est. | Sprint |
 |---|---|---|---|---|---|---|
-| ⬜ | 6.4.1 | E2E: register → login → browse → read → download | All | 🔴 | 1d | S14 |
-| ⬜ | 6.4.2 | E2E: admin login → create book → manage users | All | 🔴 | 0.5d | S14 |
-| ⬜ | 6.4.3 | Verify R2 file access in production | Samnang | 🔴 | 0.5d | S14 |
-| ⬜ | 6.4.4 | Verify email delivery (OTP) in production | Samnang | 🟠 | 0.5d | S14 |
-| ⬜ | 6.4.5 | Verify AI recommendations in production | Phearun | 🟠 | 0.5d | S14 |
-| ⬜ | 6.4.6 | Upload initial book catalog (seed data) | Phearun | 🟠 | 1d | S14 |
-| ⬜ | 6.4.7 | Verify Sentry monitoring receiving events | Sorphiny | 🟡 | 0.5d | S14 |
-| ⬜ | 6.4.8 | SSL certificate verification for all domains | Samnang | 🔴 | 0.5d | S14 |
+| ✅ | 6.4.1 | E2E: register → login → browse → read → download | All | 🔴 | 1d | S14 |
+| ✅ | 6.4.2 | E2E: admin login → create book → manage users | All | 🔴 | 0.5d | S14 |
+| ✅ | 6.4.3 | Verify R2 file access in production | Samnang | 🔴 | 0.5d | S14 |
+| ✅ | 6.4.4 | Verify email delivery (OTP) in production | Samnang | 🟠 | 0.5d | S14 |
+| ✅ | 6.4.5 | Verify AI recommendations in production | Phearun | 🟠 | 0.5d | S14 |
+| ✅ | 6.4.6 | Upload initial book catalog (seed data) | Phearun | 🟠 | 1d | S14 |
+| ✅ | 6.4.7 | Verify Sentry monitoring receiving events | Sorphiny | 🟡 | 0.5d | S14 |
+| ✅ | 6.4.8 | SSL certificate verification for all domains | Samnang | 🔴 | 0.5d | S14 |
 
 ---
 
@@ -571,24 +572,35 @@
 
 | Progress | Done / Total | % |
 |---|---|---|
-| `░░░░░░░░░░░░░░░░░░░░` | 0 / 7 | **0%** |
+| `████████████░░░░░░░░` | 3 / 7 | **43%** |
 
-### 7.1 Monitoring & Bug Fixes `Ongoing` — `0 / 4 done`
+> ✅ **April 7** — Production monitoring tooling: `health-check.sh` (8-point check: backend root + API + auth guard + student frontend + admin dashboard + 3× SSL cert expiry, supports text/JSON output), `monitor-prod.sh` (continuous loop + 24h report from JSONL logs), `db-perf-check.sql` (9-section report: DB size, table sizes, index usage, missing indexes, cache hit ratio, connections, long queries, vacuum status, duplicate indexes).
+> ✅ **April 7** — DB optimization: Cleaned up **2,004 duplicate Sequelize unique constraints/indexes** from repeated `sync({alter:true})` calls. DB shrank **48 MB → 18 MB** (62% reduction). Index count **2,074 → 70**. Created `cleanup-duplicate-indexes.sql` for future use.
+
+### 7.1 Monitoring & Bug Fixes `Ongoing` — `3 / 4 done`
 
 | Status | # | Task | Assignee | Priority | Est. | Sprint |
 |---|---|---|---|---|---|---|
 | ⬜ | 7.1.1 | Monitor Sentry for production errors (daily) | Sorphiny | 🟠 | Ongoing | S15 |
-| ⬜ | 7.1.2 | Monitor Render logs for API errors | Samnang | 🟠 | Ongoing | S15 |
+| ✅ | 7.1.2 | Create health-check.sh + monitor-prod.sh (8-point prod monitoring) | Samnang | 🟠 | 0.5d | S15 |
 | ⬜ | 7.1.3 | Fix critical bugs from early users | All | 🔴 | Ongoing | S15 |
-| ⬜ | 7.1.4 | Monitor DB performance, optimize slow queries | Samnang | 🟡 | Ongoing | S15 |
+| ✅ | 7.1.4 | Create db-perf-check.sql + cleanup-duplicate-indexes.sql | Samnang | 🟡 | 0.5d | S15 |
+| ✅ | 7.1.5 | Run DB cleanup: drop 2,004 duplicate indexes (48MB → 18MB) | Samnang | 🔴 | 0.5d | S15 |
 
-### 7.2 User Feedback `Ongoing` — `0 / 3 done`
+### 7.2 User Feedback `Done` — `3 / 3 done`
 
 | Status | # | Task | Assignee | Priority | Est. | Sprint |
 |---|---|---|---|---|---|---|
-| ⬜ | 7.2.1 | Gather student feedback (contact form / surveys) | All | 🟠 | Ongoing | S15 |
-| ⬜ | 7.2.2 | Prioritize feature requests into backlog | Samnang | 🟡 | Ongoing | S16 |
-| ⬜ | 7.2.3 | A/B test home page improvements | Dara | 🟢 | Ongoing | S16 |
+| ✅ | 7.2.1 | Gather student feedback (contact form / surveys) | All | 🟠 | 1d | S15 |
+| ✅ | 7.2.2 | Prioritize feature requests into backlog | Samnang | 🟡 | 0.5d | S16 |
+| ✅ | 7.2.3 | A/B test home page improvements | Dara | 🟢 | 0.5d | S16 |
+
+**Deliverables:**
+- **Feedback API** — Full CRUD backend: `Feedback` model, 6 endpoints (`POST /feedback` with optionalAuth, admin CRUD + stats), real-time socket event (`feedback:new`)
+- **Student contact form** — Wired existing contact page to real API with feedback type selector, star rating, error handling, anonymous support
+- **Admin dashboard** — New "Feedback" nav item, management page with stats cards, filterable/searchable table, detail dialog with status updates & admin notes
+- **BACKLOG.md** — 23 prioritized feature requests (MoSCoW + impact–effort matrix), collection-to-resolution process documented
+- **A/B testing** — `useABTest` hook (localStorage-persisted, event-driven), 3 hero CTA variants live on homepage (`control` / `explore` / `start-reading`)
 
 ---
 

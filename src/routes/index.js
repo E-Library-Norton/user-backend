@@ -25,6 +25,7 @@ const settingsRoutes = require('./settings');
 const activityLogRoutes = require('./activities');
 const reviewRoutes      = require('./reviews');
 const pushRoutes        = require('./push');
+const feedbackRoutes    = require('./feedback');
 // ── Mount 
 
 // Auth
@@ -51,6 +52,7 @@ router.use('/settings', settingsRoutes);
 router.use('/activities', activityLogRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/push',    pushRoutes);
+router.use('/feedback', feedbackRoutes);
 
 // ── API info ──────────────────────────────────────────────────────────────────
 router.get('/', (req, res) => {
@@ -74,6 +76,7 @@ router.get('/', (req, res) => {
       departments: '/api/departments',
       downloads: '/api/downloads',
       activities: '/api/activities',
+      feedback: '/api/feedback',
     },
   });
 });

@@ -95,6 +95,7 @@ const EVENTS = {
   REVIEW_CREATED:    'review:created',     // { review, bookTitle }
   REVIEW_UPDATED:    'review:updated',     // { review, bookTitle }
   REVIEW_DELETED:    'review:deleted',     // { reviewId, bookTitle }
+  FEEDBACK_NEW:      'feedback:new',       // { feedback }
   NOTIFICATION_NEW:  'notification:new',   // { title, body, url }
 };
 
