@@ -6,6 +6,9 @@ const { authenticate, authorize, optionalAuth } = require('../middleware/auth');
 // ── Public — submit feedback (optionalAuth: logged-in users auto-link) ──────
 router.post('/', optionalAuth, FeedbackController.create);
 
+// ── Public — testimonials for homepage ──────────────────────────────────────
+router.get('/public', FeedbackController.getPublicTestimonials);
+
 // ── Admin — list all feedback with filters ──────────────────────────────────
 router.get('/', authenticate, authorize('admin', 'librarian'), FeedbackController.getAll);
 

@@ -3,7 +3,7 @@ const { DeleteObjectCommand }  = require('@aws-sdk/client-s3');
 const r2                       = require('../config/r2');
 const ResponseFormatter        = require('../utils/responseFormatter');
 const Helpers                  = require('../utils/helpers');
-const { uploadToCloudinary, deleteFromCloudinary, extractKeyFromUrl } = require('../utils/cloudR2Upload');
+const { uploadToR2, deleteFromR2, extractKeyFromUrl } = require('../utils/cloudR2Upload');
 const { MAX_FILE_SIZES }       = require('../config/constants');
 
 const BUCKET = process.env.R2_BUCKET;
@@ -55,7 +55,7 @@ class UploadController {
       if (sizeError) return ResponseFormatter.error(res, sizeError, 400, 'FILE_TOO_LARGE');
 
       const folder = FOLDER_MAP[fieldName] || (file.mimetype === 'application/pdf' ? 'books/pdfs' : 'books/covers');
-      const result = await uploadToCloudinary(file, folder);
+      const result = await uploadToR2(file, folder);
 
       const urlKey = URL_KEY_MAP[fieldName] || 'url';
 
@@ -80,7 +80,7 @@ class UploadController {
         if (sizeError) return ResponseFormatter.error(res, sizeError, 400, 'FILE_TOO_LARGE');
 
         const folder         = FOLDER_MAP[field] || `uploads/${field}`;
-        const result         = await uploadToCloudinary(file, folder);
+        const result         = await uploadToR2(file, folder);
         
         const urlKey = URL_KEY_MAP[field] || 'url';
         uploadedFiles[field] = {
@@ -108,7 +108,7 @@ class UploadController {
       if (objectKey) {
         await r2.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: objectKey }));
       } else if (file_url) {
-        await deleteFromCloudinary(file_url); // tries extractKeyFromUrl internally
+        await deleteFromR2(file_url); // tries extractKeyFromUrl internally
       } else {
         return ResponseFormatter.error(res, 'key or file_url is required', 400, 'FILE_IDENTIFIER_REQUIRED');
       }

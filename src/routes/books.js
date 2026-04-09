@@ -10,6 +10,7 @@ const { uploadMulti, uploadScan }    = require('../middleware/upload');
 router.get ('/',           BookController.getAll);
 router.post('/scan-search', uploadScan, BookController.scanSearch);
 router.get ('/:id',        BookController.getById);
+router.get ('/:id/summary', BookController.getSummary); // AI summary (Gemini, cached 24 h)
 
 // PDF access:
 // GET  /:id/cover    → PUBLIC — redirects to presigned cover image URL

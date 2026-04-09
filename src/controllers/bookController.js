@@ -542,7 +542,7 @@ class BookController {
     } catch (err) { next(err); }
   }
 
-  // ── GET /api/books/:id/downloads 
+  // ── GET /api/books/:id/downloads
   static async getDownloads(req, res, next) {
     try {
       const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
@@ -563,6 +563,52 @@ class BookController {
         downloads: rows, total: count,
         page: Number(page), totalPages: Math.ceil(count / Number(limit)),
       });
+    } catch (err) { next(err); }
+  }
+
+  // ── GET /api/books/:id/summary  (AI-generated, Gemini, cached 24 h)
+  static async getSummary(req, res, next) {
+    try {
+      const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+      if (!BookController._sumCache) BookController._sumCache = new Map();
+      const key    = `sum_${req.params.id}`;
+      const cached = BookController._sumCache.get(key);
+      if (cached && Date.now() - cached.ts < 24 * 60 * 60 * 1000) {
+        return ResponseFormatter.success(res, { summary: cached.text }, 'Book summary (cached)');
+      }
+      const book = await Book.findOne({
+        where: { id: req.params.id, isDeleted: false },
+        include: [
+          { model: Author,   as: 'Authors',  attributes: ['name'] },
+          { model: Category, as: 'Category', attributes: ['name'] },
+        ],
+        attributes: ['id', 'title', 'description', 'publicationYear'],
+      });
+      if (!book) throw new NotFoundError('Book not found');
+
+      const authorsStr = (book.Authors || []).map((a) => a.name).join(', ') || 'Unknown';
+      const prompt = `Write a concise 3-sentence academic summary for this library book.
+Title: ${book.title}
+Author(s): ${authorsStr}
+Category: ${book.Category?.name || 'General'}
+Description: ${book.description || '(no description)'}
+Requirements: exactly 3 sentences, academic tone, no first person, mention the key topic and who benefits from reading it.`;
+
+      const r = await fetch(`${GEMINI_URL}?key=${process.env.GOOGLE_AI_API_KEY}`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
+        }),
+      });
+      const data    = await r.json();
+      const summary = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+        || book.description?.slice(0, 400)
+        || 'No summary available.';
+
+      BookController._sumCache.set(key, { text: summary, ts: Date.now() });
+      return ResponseFormatter.success(res, { summary }, 'Book summary generated');
     } catch (err) { next(err); }
   }
 }

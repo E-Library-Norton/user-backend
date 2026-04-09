@@ -70,6 +70,49 @@ class FeedbackController {
     }
   }
 
+  // ── GET /api/feedback/public — public testimonials ──────────────────────────
+  // No auth required — returns approved feedback with ratings for homepage
+  static async getPublicTestimonials(req, res, next) {
+    try {
+      const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 10));
+
+      const feedbacks = await Feedback.findAll({
+        where: {
+          rating: { [Op.gte]: 4 },          // only 4–5 star feedback
+        },
+        include: [
+          {
+            model: User,
+            as: 'User',
+            attributes: ['id', 'firstName', 'lastName', 'username', 'avatar'],
+            required: false,
+          },
+        ],
+        attributes: ['id', 'name', 'message', 'rating', 'type', 'created_at'],
+        order: [['created_at', 'DESC']],
+        limit,
+      });
+
+      const testimonials = feedbacks.map(f => {
+        const plain = f.get({ plain: true });
+        const user = plain.User;
+        return {
+          id:        plain.id,
+          name:      user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : plain.name,
+          avatar:    user?.avatar || null,
+          message:   plain.message,
+          rating:    plain.rating,
+          type:      plain.type,
+          createdAt: plain.created_at,
+        };
+      });
+
+      return ResponseFormatter.success(res, testimonials, 'Public testimonials fetched');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ── GET /api/feedback ──────────────────────────────────────────────────────
   // Admin only — paginated list with filters
   static async getAll(req, res, next) {

@@ -6,7 +6,7 @@
 > **Project:** Norton E-Library  
 > **Team:** Samnang · Phearun · Dara · Sorphiny
 
-> 🟢 **Last sync:** July 1, 2025 — Phases 1–6 ✅ · Phase 7.2 feedback system done · 207/219 tasks (95%)
+> 🟢 **Last sync:** April 9, 2026 — Phases 1–6 ✅ · Phase 7.2 feedback system done · B.4 reading goals ✅ · B.5 book collections ✅ · B.9 i18n ✅ · B.15 notifications ✅ · B.17 citations ✅ · B.19 QR code ✅ · 211/219 tasks (96%)
 
 ---
 
@@ -608,12 +608,12 @@
 
 | Status | # | Feature | Priority | Complexity |
 |---|---|---|---|---|
-| ⬜ | B.4 | Reading goals & achievements (gamification) | 🟡 | Medium |
-| ⬜ | B.5 | Book collections / curated playlists by professors | 🟡 | Medium |
+| ✅ | B.4 | Reading goals & achievements (gamification) | 🟡 | Medium |
+| ✅ | B.5 | Book collections / curated playlists by professors | 🟡 | Medium |
 | ⬜ | B.6 | Mobile app (React Native / PWA) | 🟡 | High |
 | ⬜ | B.7 | Annotation & highlighting in PDF reader | 🟡 | High |
 | ⬜ | B.8 | Bulk book import via CSV/Excel | 🟠 | Low |
-| ⬜ | B.9 | Multi-language UI (full Khmer interface) | 🟠 | High |
+| ✅ | B.9 | Multi-language UI — Khmer (km) & English (en) i18n | 🟠 | High |
 | ⬜ | B.10 | Integration with Norton LMS / student portal | 🟡 | High |
 | ⬜ | B.11 | Offline reading (PWA with service workers) | 🟡 | High |
 | ⬜ | B.12 | Book request system (students request new books) | 🟡 | Low |
