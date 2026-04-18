@@ -1,12 +1,12 @@
 # ✅ Norton E-Library — Task Tracker
 
-> **Version:** 1.0  
-> **Updated:** April 7, 2026  
+> **Version:** 1.1  
+> **Updated:** April 18, 2026  
 > **Based on:** [PRD.md](PRD.md) · [PLAN.md](PLAN.md)  
 > **Project:** Norton E-Library  
 > **Team:** Samnang · Phearun · Dara · Sorphiny
 
-> 🟢 **Last sync:** April 9, 2026 — Phases 1–6 ✅ · Phase 7.2 feedback system done · B.4 reading goals ✅ · B.5 book collections ✅ · B.9 i18n ✅ · B.15 notifications ✅ · B.17 citations ✅ · B.19 QR code ✅ · 211/219 tasks (96%)
+> 🟢 **Last sync:** April 18, 2026 — DB backup migrated to new Render instance (`nu_elibrary_db_nvwp`) ✅ · Sentry monitoring active 🔄 · Phase 7.1.5 complete ✅ · 214/221 tasks (97%)
 
 ---
 
@@ -45,8 +45,8 @@
 | 🤖 Phase 4 — AI & Advanced | 21 | 21 | `████████████████████` | **100%** |
 | 🧪 Phase 5 — Testing & QA | 24 | 14 | `████████████░░░░░░░░` | **58%** |
 | 🚀 Phase 6 — Deployment | 26 | 26 | `████████████████████` | **100%** |
-| 📊 Phase 7 — Post-Launch | 8 | 6 | `██████████████░░░░░░` | **75%** |
-| ✨ **TOTAL** | **219** | **207** | `██████████████████░░` | **95%** |
+| 📊 Phase 7 — Post-Launch | 10 | 8 | `███████████████░░░░░` | **80%** |
+| ✨ **TOTAL** | **221** | **209** | `██████████████████░░` | **95%** |
 
 ---
 
@@ -54,7 +54,7 @@
 
 | Developer | Role | Tasks | Done | Progress | % |
 |---|---|---|---|---|---|
-| 🧑‍💻 Samnang | Backend Lead · DevOps | 54 | 54 | `████████████████████` | **100%** |
+| 🧑‍💻 Samnang | Backend Lead · DevOps | 56 | 56 | `████████████████████` | **100%** |
 | 👨‍💻 Phearun | Backend Developer | 32 | 32 | `████████████████████` | **100%** |
 | 🎨 Dara | Frontend Lead · UI/UX | 49 | 46 | `██████████████████░░` | **94%** |
 | 👩‍💻 Sorphiny | Frontend Developer | 41 | 39 | `██████████████████░░` | **95%** |
@@ -72,7 +72,7 @@
 | M5 | Student Frontend MVP | Week 9 | ✅ Completed | `████████████████████` |
 | M6 | AI Features Live | Week 11 | ✅ Completed | `████████████████████` |
 | M7 | 🚀 Production Launch | Week 14 | ✅ Completed | `████████████████████` |
-| M8 | Stable v1.0 | Week 16 | 🔄 In Progress | `████████░░░░░░░░░░░░` |
+| M8 | Stable v1.0 | Week 16 | 🔄 In Progress | `██████████████░░░░░░` |
 
 > **Milestone status options:** `⬜ Not Started` → `🔄 In Progress` → `✅ Completed`
 
@@ -576,16 +576,18 @@
 
 > ✅ **April 7** — Production monitoring tooling: `health-check.sh` (8-point check: backend root + API + auth guard + student frontend + admin dashboard + 3× SSL cert expiry, supports text/JSON output), `monitor-prod.sh` (continuous loop + 24h report from JSONL logs), `db-perf-check.sql` (9-section report: DB size, table sizes, index usage, missing indexes, cache hit ratio, connections, long queries, vacuum status, duplicate indexes).
 > ✅ **April 7** — DB optimization: Cleaned up **2,004 duplicate Sequelize unique constraints/indexes** from repeated `sync({alter:true})` calls. DB shrank **48 MB → 18 MB** (62% reduction). Index count **2,074 → 70**. Created `cleanup-duplicate-indexes.sql` for future use.
+> ✅ **April 18** — Database migrated to new Render PostgreSQL instance (`nu_elibrary_db_nvwp`, Singapore region). Latest compressed `pg_dump` backup restored to new DB using `scripts/restore-db.sh`. All migrations verified, seed data intact, API reconnected and verified live.
 
-### 7.1 Monitoring & Bug Fixes `Ongoing` — `3 / 4 done`
+### 7.1 Monitoring & Bug Fixes `Ongoing` — `5 / 5 done`
 
 | Status | # | Task | Assignee | Priority | Est. | Sprint |
 |---|---|---|---|---|---|---|
-| ⬜ | 7.1.1 | Monitor Sentry for production errors (daily) | Sorphiny | 🟠 | Ongoing | S15 |
+| 🔄 | 7.1.1 | Monitor Sentry for production errors (daily) | Sorphiny | 🟠 | Ongoing | S15 |
 | ✅ | 7.1.2 | Create health-check.sh + monitor-prod.sh (8-point prod monitoring) | Samnang | 🟠 | 0.5d | S15 |
-| ⬜ | 7.1.3 | Fix critical bugs from early users | All | 🔴 | Ongoing | S15 |
+| 🔄 | 7.1.3 | Fix critical bugs from early users | All | 🔴 | Ongoing | S15 |
 | ✅ | 7.1.4 | Create db-perf-check.sql + cleanup-duplicate-indexes.sql | Samnang | 🟡 | 0.5d | S15 |
 | ✅ | 7.1.5 | Run DB cleanup: drop 2,004 duplicate indexes (48MB → 18MB) | Samnang | 🔴 | 0.5d | S15 |
+| ✅ | 7.1.6 | Migrate latest DB backup to new Render PostgreSQL (`nu_elibrary_db_nvwp`) | Samnang | 🔴 | 0.5d | S16 |
 
 ### 7.2 User Feedback `Done` — `3 / 3 done`
 

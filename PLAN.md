@@ -1,8 +1,9 @@
 # 📋 Norton E-Library — Project Plan
 
-> **Version:** 1.0  
+> **Version:** 1.1  
 > **Created:** April 1, 2026  
-> **Based on:** [PRD.md](PRD.md) v1.0  
+> **Last Updated:** April 18, 2026  
+> **Based on:** [PRD.md](PRD.md) v1.2  
 > **Project:** Norton E-Library  
 > **Team Lead:** Chan Samnang
 
@@ -530,6 +531,7 @@ Phase 7 ░░░░░░░░░░░░░░░█ Post-Launch & Iteration
 | 7.1.2 | Monitor Render logs for API errors/crashes | Samnang | 🟠 High | Ongoing |
 | 7.1.3 | Fix critical bugs reported by early users | All | 🔴 Critical | Ongoing |
 | 7.1.4 | Monitor DB performance and optimize slow queries | Samnang | 🟡 Medium | Ongoing |
+| 7.1.5 | Migrate database backup to new Render PostgreSQL instance (`nu_elibrary_db_nvwp`) | Samnang | 🔴 Critical | 0.5d |
 
 ### 7.2 User Feedback & Iteration (Week 15–16)
 

@@ -1,10 +1,10 @@
 # 📚 Norton E-Library — Product Requirements Document (PRD)
 
-> **Version:** 1.1  
-> **Last Updated:** April 3, 2026  
+> **Version:** 1.2  
+> **Last Updated:** April 18, 2026  
 > **Author:** Norton University Development Team  
 > **Project:** Norton E-Library  
-> **Status:** In Development
+> **Status:** Live in Production (v1.0)
 
 ---
 
@@ -1069,6 +1069,8 @@ The system uses Google's Gemini AI to provide intelligent book recommendations:
 - **Migration Config:** `.sequelizerc` → `src/config/sequelize-cli-config.js` (reads `DATABASE_URL`)
 - **Cold Start Handling:** Retry loop for DB connection (5 attempts, 3s backoff)
 - **No auto-sync** — `sequelize.sync()` removed; all schema changes via versioned migrations
+- **Active DB Instance (April 2026):** `nu_elibrary_db_nvwp` on Render Singapore (`dpg-d7h07ej7uimc73d1o6qg-a.singapore-postgres.render.com`)
+- **DB Migration:** Database backup restored to new Render PostgreSQL instance on April 18, 2026 using `scripts/restore-db.sh` with compressed `pg_dump` backup.
 
 ### 18.3 Frontend Deployment (Vercel)
 - **Framework:** Next.js (auto-detected by Vercel)
@@ -1086,7 +1088,7 @@ The system uses Google's Gemini AI to provide intelligent book recommendations:
 | Variable | Description |
 |---|---|
 | `PORT` | Server port (default: 5005) |
-| `DATABASE_URL` | PostgreSQL connection string (Render) |
+| `DATABASE_URL` | PostgreSQL connection string (Render) — e.g. `postgresql://nu_elibrary_db_nvwp_user:***@dpg-d7h07ej7uimc73d1o6qg-a.singapore-postgres.render.com/nu_elibrary_db_nvwp` |
 | `ACCESS_TOKEN_SECRET` | JWT access token signing secret |
 | `ACCESS_TOKEN_EXPIRES_IN` | Access token expiry (default: 30d) |
 | `REFRESH_TOKEN_SECRET` | JWT refresh token signing secret |
