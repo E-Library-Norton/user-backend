@@ -57,6 +57,27 @@ const User = sequelize.define(
       defaultValue: false,
       field: "is_deleted",
     },
+    // ── 2FA fields ──────────────────────────────────────────────────────
+    twoFactorEnabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: "two_factor_enabled",
+    },
+    twoFactorSecret: {
+      type: DataTypes.STRING(256),
+      allowNull: true,
+      field: "two_factor_secret",
+    },
+    faceDescriptor: {
+      type: DataTypes.TEXT,          // JSON-encoded Float32Array (128 dims)
+      allowNull: true,
+      field: "face_descriptor",
+    },
+    recoveryCodes: {
+      type: DataTypes.TEXT,          // JSON array of hashed recovery codes
+      allowNull: true,
+      field: "recovery_codes",
+    },
   },
   {
     tableName: "users",
@@ -90,6 +111,9 @@ User.beforeUpdate(async (user) => {
 User.prototype.toJSON = function () {
   const values = Object.assign({}, this.get());
   delete values.password;
+  delete values.twoFactorSecret;
+  delete values.faceDescriptor;
+  delete values.recoveryCodes;
   return values;
 };
 

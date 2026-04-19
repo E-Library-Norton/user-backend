@@ -58,6 +58,7 @@ class AuthController {
       const user = await User.findOne({
         where: { [Op.or]: [{ username: identifier }, { email: identifier }, { studentId: identifier }] },
         include: { association: 'Roles' },
+        attributes: { include: ['twoFactorSecret', 'faceDescriptor'] },
       });
 
       if (!user) {
@@ -67,6 +68,25 @@ class AuthController {
         throw new AuthenticationError('Incorrect password. Please try again');
       }
       if (!user.isActive) throw new AuthenticationError('Your account has been deactivated. Please contact an administrator');
+
+      // ── 2FA check ──────────────────────────────────────────────────────────────
+      if (user.twoFactorEnabled) {
+        // Issue a short-lived temp token that must be exchanged via /2fa/verify
+        const tempToken = jwt.sign(
+          { id: user.id, requires2FA: true },
+          process.env.ACCESS_TOKEN_SECRET,
+          { expiresIn: '5m' },
+        );
+
+        logActivity({ userId: user.id, action: 'login_2fa_pending', targetId: user.id, targetName: user.username, targetType: 'user' });
+
+        return ResponseFormatter.success(res, {
+          requires2FA: true,
+          tempToken,
+          hasFaceEnrolled: !!user.faceDescriptor,
+        }, 'Two-factor authentication required');
+      }
+      // ── end 2FA check ──────────────────────────────────────────────────────────
 
       const accessToken  = AuthController.generateAccessToken(user);
       const refreshToken = AuthController.generateRefreshToken(user);
@@ -79,6 +99,7 @@ class AuthController {
           email: user.email, studentId: user.studentId,
           firstName: user.firstName, lastName: user.lastName,
           roles: user.Roles.map(r => r.name),
+          twoFactorEnabled: user.twoFactorEnabled,
         },
         accessToken,
         refreshToken,
@@ -127,7 +148,7 @@ class AuthController {
         id: user.id, avatar: user.avatar, username: user.username,
         email: user.email, studentId: user.studentId,
         firstName: user.firstName, lastName: user.lastName,
-        roles: user.Roles.map(r => r.name), createdAt: user.createdAt,
+        roles: user.Roles.map(r => r.name), twoFactorEnabled: user.twoFactorEnabled, createdAt: user.createdAt,
       });
     } catch (err) { next(err); }
   }

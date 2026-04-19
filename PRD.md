@@ -1,7 +1,7 @@
 # 📚 Norton E-Library — Product Requirements Document (PRD)
 
-> **Version:** 1.2  
-> **Last Updated:** April 18, 2026  
+> **Version:** 1.3  
+> **Last Updated:** April 19, 2026  
 > **Author:** Norton University Development Team  
 > **Project:** Norton E-Library  
 > **Status:** Live in Production (v1.0)
@@ -1071,6 +1071,7 @@ The system uses Google's Gemini AI to provide intelligent book recommendations:
 - **No auto-sync** — `sequelize.sync()` removed; all schema changes via versioned migrations
 - **Active DB Instance (April 2026):** `nu_elibrary_db_nvwp` on Render Singapore (`dpg-d7h07ej7uimc73d1o6qg-a.singapore-postgres.render.com`)
 - **DB Migration:** Database backup restored to new Render PostgreSQL instance on April 18, 2026 using `scripts/restore-db.sh` with compressed `pg_dump` backup.
+- **AI Route Fix (April 19, 2026):** `aiRecommendations` router was defined but not mounted — fixed by adding `router.use('/api/ai/recommendations', aiRecommendationRoutes)` in `src/routes/index.js`. All AI recommendation endpoints now fully reachable.
 
 ### 18.3 Frontend Deployment (Vercel)
 - **Framework:** Next.js (auto-detected by Vercel)
@@ -1168,6 +1169,41 @@ All API responses follow a standardized format:
 | `NotFoundError` | 404 | `NOT_FOUND` |
 | `ConflictError` | 409 | `CONFLICT` |
 | Internal Server Error | 500 | `INTERNAL_SERVER_ERROR` |
+
+---
+
+## Appendix C: Postman Collection
+
+**File:** `user-backend/E-Library-API.postman_collection.json`  
+**Created:** April 19, 2026  
+
+A complete Postman collection covering all API endpoints is available for import:
+
+| Group | Requests |
+|---|---|
+| Auth | 13 |
+| Users | 7 |
+| Roles | 6 |
+| Permissions | 3 |
+| Books | 11 |
+| Categories / Authors / Editors / Publishers / Material Types / Departments | 6 each |
+| File Uploads | 3 |
+| Downloads | 3 |
+| Reviews | 5 |
+| Statistics | 4 |
+| Settings | 4 |
+| Activities | 3 |
+| Push Notifications | 4 |
+| Feedback | 6 |
+| AI Recommendations | 7 |
+
+**Features:**
+- Collection variable `baseUrl` pre-set to `{{baseUrl}}`
+- Login request auto-saves `accessToken` via test script
+- Per-resource variables: `userId`, `bookId`, `roleId`, `categoryId`, `authorId`, `feedbackId`, etc.
+- Bearer token applied globally via collection auth
+
+**Import:** Postman → Import → select `E-Library-API.postman_collection.json` → set `baseUrl` to your backend URL.
 
 ---
 

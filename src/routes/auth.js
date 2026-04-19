@@ -30,4 +30,16 @@ router.post('/forgot-password', AuthController.forgotPassword);
 router.post('/verify-otp',      AuthController.verifyOtp);
 router.post('/reset-password',  AuthController.resetPassword);
 
+// ── Two-Factor Authentication ─────────────────────────────────────────────────
+const TwoFactorController = require('../controllers/twoFactorController');
+
+router.post('/2fa/setup',          authenticate, TwoFactorController.setup);
+router.post('/2fa/verify-setup',   authenticate, TwoFactorController.verifySetup);
+router.post('/2fa/verify',                       TwoFactorController.verify);       // no auth (uses tempToken)
+router.post('/2fa/disable',              authenticate, TwoFactorController.disable);
+router.post('/2fa/regenerate-recovery',  authenticate, TwoFactorController.regenerateRecovery);
+router.get('/2fa/status',                authenticate, TwoFactorController.status);
+router.post('/2fa/face/enroll',    authenticate, TwoFactorController.enrollFace);
+router.post('/2fa/face/verify',                  TwoFactorController.verifyFace);   // no auth during login
+
 module.exports = router;

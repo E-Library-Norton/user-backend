@@ -8,3 +8,6 @@
 {"timestamp":"2026-04-07T16:20:39.330Z","level":"INFO","message":"Admin created user: admin"}
 {"timestamp":"2026-04-18T09:06:19.634Z","level":"INFO","message":"Admin created user: admin"}
 {"timestamp":"2026-04-19T03:47:22.251Z","level":"INFO","message":"Admin created user: superadmin1"}
+{"timestamp":"2026-04-19T13:28:25.909Z","level":"INFO","message":"Admin created user: newstudent"}
+{"timestamp":"2026-04-19T13:28:25.912Z","level":"INFO","message":"Soft-deleted user testuser by admin 2"}
+{"timestamp":"2026-04-19T13:29:10.159Z","level":"INFO","message":"Admin created user: newstudent"}

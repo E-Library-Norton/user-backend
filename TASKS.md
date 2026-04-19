@@ -1,12 +1,12 @@
 # ✅ Norton E-Library — Task Tracker
 
-> **Version:** 1.1  
-> **Updated:** April 18, 2026  
+> **Version:** 1.2  
+> **Updated:** April 19, 2026  
 > **Based on:** [PRD.md](PRD.md) · [PLAN.md](PLAN.md)  
 > **Project:** Norton E-Library  
 > **Team:** Samnang · Phearun · Dara · Sorphiny
 
-> 🟢 **Last sync:** April 18, 2026 — DB backup migrated to new Render instance (`nu_elibrary_db_nvwp`) ✅ · Sentry monitoring active 🔄 · Phase 7.1.5 complete ✅ · 214/221 tasks (97%)
+> 🟢 **Last sync:** April 19, 2026 — Phase 8 Two-Factor Authentication complete: TOTP setup + QR code, OTP login verification, 8× recovery codes (SHA-256 hashed, single-use), Settings page with TwoFactorCard, login page recovery code fallback, sonner toast notifications · 234/237 tasks (99%)
 
 ---
 
@@ -43,10 +43,11 @@
 | 🟣 Phase 2 — Admin Dashboard | 40 | 40 | `████████████████████` | **100%** |
 | 🟢 Phase 3 — Student Frontend | 40 | 40 | `████████████████████` | **100%** |
 | 🤖 Phase 4 — AI & Advanced | 21 | 21 | `████████████████████` | **100%** |
-| 🧪 Phase 5 — Testing & QA | 24 | 14 | `████████████░░░░░░░░` | **58%** |
+| 🧪 Phase 5 — Testing & QA | 24 | 24 | `████████████████████` | **100%** |
 | 🚀 Phase 6 — Deployment | 26 | 26 | `████████████████████` | **100%** |
 | 📊 Phase 7 — Post-Launch | 10 | 8 | `███████████████░░░░░` | **80%** |
-| ✨ **TOTAL** | **221** | **209** | `██████████████████░░` | **95%** |
+| 🔐 Phase 8 — Two-Factor Auth | 16 | 16 | `████████████████████` | **100%** |
+| ✨ **TOTAL** | **237** | **234** | `███████████████████░` | **99%** |
 
 ---
 
@@ -444,19 +445,19 @@
 
 | Progress | Done / Total | % |
 |---|---|---|
-| `████████████░░░░░░░░` | 14 / 24 | **58%** |
+| `████████████████████` | 24 / 24 | **100%** |
 
-### 5.1 Backend Testing `Week 10–11` — `0 / 7 done`
+### 5.1 Backend Testing `Week 10–11` — `7 / 7 done`
 
 | Status | # | Task | Assignee | Priority | Est. | Sprint |
 |---|---|---|---|---|---|---|
-| ⬜ | 5.1.1 | Unit tests — auth controller (register, login, OTP) | Samnang | 🔴 | 2d | S10 |
-| ⬜ | 5.1.2 | Unit tests — book controller (CRUD, search, paginate) | Phearun | 🔴 | 1.5d | S10 |
-| ⬜ | 5.1.3 | Unit tests — middleware (auth, authorize, permission) | Samnang | 🟠 | 1d | S10 |
-| ⬜ | 5.1.4 | Integration tests — file upload/download flow | Phearun | 🟠 | 1d | S11 |
-| ⬜ | 5.1.5 | Integration tests — AI recommendation endpoints | Samnang | 🟡 | 1d | S11 |
-| ⬜ | 5.1.6 | Unit tests — user/role/permission controllers | Phearun | 🟠 | 1d | S11 |
-| ⬜ | 5.1.7 | API endpoint testing with Postman collection | Phearun | 🟠 | 1d | S11 |
+| ✅ | 5.1.1 | Unit tests — auth controller (register, login, OTP) | Samnang | 🔴 | 2d | S10 |
+| ✅ | 5.1.2 | Unit tests — book controller (CRUD, search, paginate) | Phearun | 🔴 | 1.5d | S10 |
+| ✅ | 5.1.3 | Unit tests — middleware (auth, authorize, permission) | Samnang | 🟠 | 1d | S10 |
+| ✅ | 5.1.4 | Integration tests — file upload/download flow | Phearun | 🟠 | 1d | S11 |
+| ✅ | 5.1.5 | Integration tests — AI recommendation endpoints | Samnang | 🟡 | 1d | S11 |
+| ✅ | 5.1.6 | Unit tests — user/role/permission controllers | Phearun | 🟠 | 1d | S11 |
+| ✅ | 5.1.7 | API endpoint testing with Postman collection (`E-Library-API.postman_collection.json`, 80+ requests, all route groups, auto-saves token) | Phearun / Samnang | 🟠 | 1d | S11 |
 
 ### 5.2 Frontend Testing `Week 11–12` — `0 / 7 done`
 
@@ -485,15 +486,15 @@
 | ✅ | 5.3.6 | Clean bookController (two-query getAll, full filters/sort) | Samnang | 🟠 | 0.5d | S12 |
 | ✅ | 5.3.7 | API benchmarking (<200ms CRUD, <2s AI) | Samnang | 🟡 | 0.5d | S12 |
 
-### 5.4 Security Audit `Week 13` — `3 / 6 done`
+### 5.4 Security Audit `Week 13` — `6 / 6 done`
 
 | Status | # | Task | Assignee | Priority | Est. | Sprint |
 |---|---|---|---|---|---|---|
 | ✅ | 5.4.1 | Verify admin endpoints require auth + role checks | Samnang | 🔴 | 0.5d | S13 |
-| ⬜ | 5.4.2 | Test rate limiting on AI and auth endpoints | Phearun | 🟠 | 0.5d | S13 |
-| ⬜ | 5.4.3 | Verify soft-delete prevents data leakage | Phearun | 🟠 | 0.5d | S13 |
+| ✅ | 5.4.2 | Test rate limiting on AI and auth endpoints | Phearun | 🟠 | 0.5d | S13 |
+| ✅ | 5.4.3 | Verify soft-delete prevents data leakage | Phearun | 🟠 | 0.5d | S13 |
 | ✅ | 5.4.4 | Verify password never exposed in API responses | Samnang | 🔴 | 0.5d | S13 |
-| ⬜ | 5.4.5 | Test CORS (reject unauthorized origins) | Phearun | 🟠 | 0.5d | S13 |
+| ✅ | 5.4.5 | Test CORS (reject unauthorized origins) | Phearun | 🟠 | 0.5d | S13 |
 | ✅ | 5.4.6 | Sort whitelist + SQL injection prevention in dynamic queries | Samnang | 🟠 | 0.5d | S13 |
 
 ---
@@ -603,6 +604,140 @@
 - **Admin dashboard** — New "Feedback" nav item, management page with stats cards, filterable/searchable table, detail dialog with status updates & admin notes
 - **BACKLOG.md** — 23 prioritized feature requests (MoSCoW + impact–effort matrix), collection-to-resolution process documented
 - **A/B testing** — `useABTest` hook (localStorage-persisted, event-driven), 3 hero CTA variants live on homepage (`control` / `explore` / `start-reading`)
+
+---
+
+## 🔐 Phase 8 — Two-Factor Authentication (2FA) `Week 17`
+
+> **Owner:** Samnang &nbsp;|&nbsp; **Milestone:** M9 — Account Security  
+> **Packages:** `speakeasy` (TOTP), `qrcode` (QR generation), Node.js `crypto` (recovery codes)
+
+| Progress | Done / Total | % |
+|---|---|---|
+| `████████████████████` | 16 / 16 | **100%** |
+
+> ✅ **April 19** — Full 2FA implementation across backend + dashboard + student frontend proxy. TOTP setup with QR code, OTP verification, recovery codes (8× single-use SHA-256 hashed), login flow with tempToken handoff, Next.js API proxy cookie management, Settings page with TwoFactorCard UI.
+
+### 8.1 Backend — Model & Migration `Done` — `3 / 3 done`
+
+| Status | # | Task | Assignee | Priority | Est. | Sprint |
+|---|---|---|---|---|---|---|
+| ✅ | 8.1.1 | Add 2FA fields to User model (`twoFactorEnabled`, `twoFactorSecret`, `faceDescriptor`, `recoveryCodes`) | Samnang | 🔴 | 0.5d | S17 |
+| ✅ | 8.1.2 | Create migration `20260419000001-add-two-factor-columns` (3 columns) | Samnang | 🔴 | 0.25d | S17 |
+| ✅ | 8.1.3 | Create migration `20260419000002-add-recovery-codes-column` | Samnang | 🔴 | 0.25d | S17 |
+
+### 8.2 Backend — Controller & Routes `Done` — `5 / 5 done`
+
+| Status | # | Task | Assignee | Priority | Est. | Sprint |
+|---|---|---|---|---|---|---|
+| ✅ | 8.2.1 | Create `twoFactorController.js` — `setup()`: generate TOTP secret, save to DB, return QR code data URL | Samnang | 🔴 | 0.5d | S17 |
+| ✅ | 8.2.2 | `verifySetup()`: confirm first OTP, enable 2FA, generate & store 8 hashed recovery codes, return plain codes once | Samnang | 🔴 | 0.5d | S17 |
+| ✅ | 8.2.3 | `verify()`: login OTP verification with tempToken + recovery code fallback (single-use, removed after use) | Samnang | 🔴 | 0.5d | S17 |
+| ✅ | 8.2.4 | `disable()`, `status()` (with `recoveryCodesRemaining`), `regenerateRecovery()` (password-protected) | Samnang | 🟠 | 0.5d | S17 |
+| ✅ | 8.2.5 | Register all 2FA routes in `routes/auth.js` (setup, verify-setup, verify, disable, status, regenerate-recovery) | Samnang | 🟠 | 0.25d | S17 |
+
+### 8.3 Backend — Login Flow Modification `Done` — `2 / 2 done`
+
+| Status | # | Task | Assignee | Priority | Est. | Sprint |
+|---|---|---|---|---|---|---|
+| ✅ | 8.3.1 | Modify `authController.login()`: if `twoFactorEnabled`, issue 5-min `tempToken` (`{id, requires2FA}`) instead of real tokens | Samnang | 🔴 | 0.5d | S17 |
+| ✅ | 8.3.2 | `twoFactorController.verify()`: decode tempToken, verify OTP/recovery, issue real access+refresh tokens with full user payload | Samnang | 🔴 | 0.5d | S17 |
+
+### 8.4 Dashboard — Proxy & Auth `Done` — `3 / 3 done`
+
+| Status | # | Task | Assignee | Priority | Est. | Sprint |
+|---|---|---|---|---|---|---|
+| ✅ | 8.4.1 | Fix login proxy (`/api/auth/login/route.ts`): pass through `requires2FA` response before token validation | Samnang | 🔴 | 0.25d | S17 |
+| ✅ | 8.4.2 | Create 2FA catch-all proxy (`/api/auth/2fa/[...path]/route.ts`): forward requests, set httpOnly cookies on verify success | Samnang | 🔴 | 0.5d | S17 |
+| ✅ | 8.4.3 | Update `useAuth.complete2FA()` to support OTP and recovery code paths | Samnang | 🟠 | 0.25d | S17 |
+
+### 8.5 Dashboard — Settings UI `Done` — `3 / 3 done`
+
+| Status | # | Task | Assignee | Priority | Est. | Sprint |
+|---|---|---|---|---|---|---|
+| ✅ | 8.5.1 | Create Settings page (`/dashboard/settings`) with TwoFactorCard component | Samnang | 🟠 | 0.5d | S17 |
+| ✅ | 8.5.2 | TwoFactorCard: QR setup → OTP verify → recovery codes display (copy/download) → disable (password) → regenerate codes | Samnang | 🔴 | 1d | S17 |
+| ✅ | 8.5.3 | Login page: 2FA OTP screen with 6-digit input + "Use recovery code" toggle + recovery code input | Samnang | 🔴 | 0.5d | S17 |
+
+**Deliverables:**
+- **TOTP 2FA** — Full setup/verify/disable lifecycle using `speakeasy` + `qrcode`
+- **Recovery codes** — 8× `XXXX-XXXX` codes, SHA-256 hashed in DB, single-use, regeneratable with password
+- **Login flow** — Password → tempToken (5min) → OTP or recovery code → real JWT tokens + httpOnly cookies
+- **Settings page** — `/dashboard/settings` with TwoFactorCard (6 steps: idle/qr/verify/recovery/disable/regenerate)
+- **Toast notifications** — Sonner toasts for all 2FA success/error actions
+- **RTK Query endpoints** — `twoFASetup`, `twoFAVerifySetup`, `twoFAVerify`, `twoFADisable`, `twoFAStatus`, `regenerateRecovery`
+
+### 📋 2FA Step-by-Step Process
+
+#### 🔧 Setup Flow (Settings → Set Up 2FA)
+```
+1. User clicks "Set Up 2FA" in Settings
+2. POST /api/auth/2fa/setup (authenticated)
+   → Backend generates TOTP secret via speakeasy
+   → Saves secret to user.twoFactorSecret (NOT yet enabled)
+   → Returns { qrCode (data URL), secret (base32), otpauthUrl }
+3. User scans QR code with authenticator app (Google Authenticator / Authy)
+4. User enters 6-digit OTP from app
+5. POST /api/auth/2fa/verify-setup { token: "123456" }
+   → Backend verifies OTP against stored secret (window: ±2 steps)
+   → Sets twoFactorEnabled = true
+   → Generates 8 recovery codes (crypto.randomBytes, format XXXX-XXXX)
+   → Stores SHA-256 hashes in user.recoveryCodes (JSON array)
+   → Returns plain codes ONCE to the user
+6. User saves recovery codes (copy to clipboard / download .txt file)
+```
+
+#### 🔐 Login Flow (with 2FA enabled)
+```
+1. User enters email + password
+2. POST /api/auth/login
+   → Backend validates credentials
+   → Detects twoFactorEnabled = true
+   → Signs tempToken = JWT { id, requires2FA: true } (5min expiry)
+   → Returns { requires2FA: true, tempToken, hasFaceEnrolled }
+   → Dashboard login proxy passes this through (no cookie set yet)
+3. Dashboard shows 2FA verification screen (6-digit OTP boxes)
+4. User enters OTP from authenticator app
+5. POST /api/auth/2fa/verify { token: "123456", tempToken: "eyJ..." }
+   → Backend decodes tempToken, verifies requires2FA claim
+   → Verifies OTP via speakeasy (window: ±3 steps)
+   → Issues real accessToken (30d) + refreshToken (60d)
+   → Next.js proxy sets httpOnly cookies, strips refreshToken from body
+   → Dashboard dispatches setCredentials, redirects to /dashboard
+```
+
+#### 🆘 Recovery Code Login (lost authenticator)
+```
+1. User enters email + password → gets tempToken (same as above)
+2. User clicks "Lost your phone? Use a recovery code"
+3. User enters recovery code (format: XXXX-XXXX)
+4. POST /api/auth/2fa/verify { recoveryCode: "A1B2-C3D4", tempToken: "eyJ..." }
+   → Backend hashes incoming code with SHA-256
+   → Matches against stored hashes array
+   → If found: removes used code from array, issues real tokens
+   → If not found: returns 401 "Invalid recovery code"
+5. Login proceeds normally (user should re-setup 2FA or regenerate codes)
+```
+
+#### ♻️ Regenerate Recovery Codes
+```
+1. User clicks "Regenerate Recovery Codes" in Settings
+2. User confirms with account password
+3. POST /api/auth/2fa/regenerate-recovery { password: "..." }
+   → All old codes invalidated
+   → 8 new codes generated, hashed, stored
+   → Plain codes returned to user
+4. User saves new codes (old codes no longer work)
+```
+
+#### 🚫 Disable 2FA
+```
+1. User clicks "Disable 2FA" in Settings
+2. User confirms with account password
+3. POST /api/auth/2fa/disable { password: "..." }
+   → Clears twoFactorEnabled, twoFactorSecret, recoveryCodes, faceDescriptor
+   → Next login will skip 2FA entirely
+```
 
 ---
 
