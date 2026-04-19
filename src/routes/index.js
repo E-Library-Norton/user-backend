@@ -26,6 +26,7 @@ const activityLogRoutes = require('./activities');
 const reviewRoutes      = require('./reviews');
 const pushRoutes        = require('./push');
 const feedbackRoutes    = require('./feedback');
+const aiRecommendationRoutes = require('./aiRecommendations');
 // ── Mount 
 
 // Auth
@@ -53,6 +54,7 @@ router.use('/activities', activityLogRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/push',    pushRoutes);
 router.use('/feedback', feedbackRoutes);
+router.use('/ai/recommendations', aiRecommendationRoutes);
 
 // ── API info ──────────────────────────────────────────────────────────────────
 router.get('/', (req, res) => {

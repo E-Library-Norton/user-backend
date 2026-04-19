@@ -1,0 +1,1287 @@
+{
+  "info": {
+    "name": "E-Library NU — Full API",
+    "description": "Complete Postman collection for all E-Library API endpoints.\n\nBase URL: {{baseUrl}}  (default: http://localhost:5005)\n\nAuthentication:\n- After login, copy the `accessToken` from the response.\n- Set it in the collection variable `accessToken`.\n- All protected routes use Bearer token automatically via the collection auth.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "elibrary-nu-full-api-2026"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl",     "value": "http://localhost:5005",  "type": "string" },
+    { "key": "accessToken", "value": "",                        "type": "string" },
+    { "key": "userId",      "value": "1",                       "type": "string" },
+    { "key": "bookId",      "value": "1",                       "type": "string" },
+    { "key": "categoryId",  "value": "1",                       "type": "string" },
+    { "key": "authorId",    "value": "1",                       "type": "string" },
+    { "key": "publisherId", "value": "1",                       "type": "string" },
+    { "key": "editorId",    "value": "1",                       "type": "string" },
+    { "key": "roleId",      "value": "1",                       "type": "string" },
+    { "key": "permId",      "value": "1",                       "type": "string" },
+    { "key": "reviewId",    "value": "1",                       "type": "string" },
+    { "key": "feedbackId",  "value": "1",                       "type": "string" },
+    { "key": "deptId",      "value": "1",                       "type": "string" },
+    { "key": "matTypeId",   "value": "1",                       "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "🏠 Health",
+      "item": [
+        {
+          "name": "API Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/", "host": ["{{baseUrl}}"], "path": [""] }
+          }
+        },
+        {
+          "name": "API Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api", "host": ["{{baseUrl}}"], "path": ["api"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"studentId\": \"NU-2024-001\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('Token saved:', json.data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"<your_refresh_token>\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api","auth","refresh"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api","auth","logout"] }
+          }
+        },
+        {
+          "name": "Get My Profile (me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api","auth","me"] }
+          }
+        },
+        {
+          "name": "Get My Profile (profile)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/profile", "host": ["{{baseUrl}}"], "path": ["api","auth","profile"] }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Updated\",\n  \"studentId\": \"NU-2024-001\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/profile", "host": ["{{baseUrl}}"], "path": ["api","auth","profile"] }
+          }
+        },
+        {
+          "name": "Get My Avatar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/avatar", "host": ["{{baseUrl}}"], "path": ["api","auth","avatar"] }
+          }
+        },
+        {
+          "name": "Upload My Avatar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "avatar", "type": "file", "src": "" }]
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/avatar", "host": ["{{baseUrl}}"], "path": ["api","auth","avatar"] }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"OldPassword123!\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/change-password", "host": ["{{baseUrl}}"], "path": ["api","auth","change-password"] }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@example.com\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/forgot-password", "host": ["{{baseUrl}}"], "path": ["api","auth","forgot-password"] }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@example.com\",\n  \"otp\": \"123456\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/verify-otp", "host": ["{{baseUrl}}"], "path": ["api","auth","verify-otp"] }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPassword123!\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["api","auth","reset-password"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "👥 Users (Admin)",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?page=1&limit=20",
+              "host": ["{{baseUrl}}"], "path": ["api","users"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api","users","{{userId}}"] }
+          }
+        },
+        {
+          "name": "Get User Avatar by ID (Public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/avatar", "host": ["{{baseUrl}}"], "path": ["api","users","{{userId}}","avatar"] }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"Password123!\",\n  \"roleId\": 2\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api","users"] }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Updated\",\n  \"email\": \"jane_updated@example.com\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api","users","{{userId}}"] }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api","users","{{userId}}"] }
+          }
+        },
+        {
+          "name": "Upload User Avatar by ID (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "avatar", "type": "file", "src": "" }]
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/avatar", "host": ["{{baseUrl}}"], "path": ["api","users","{{userId}}","avatar"] }
+          }
+        },
+        {
+          "name": "Assign Roles to User",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"roleIds\": [1, 2]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/roles", "host": ["{{baseUrl}}"], "path": ["api","users","{{userId}}","roles"] }
+          }
+        },
+        {
+          "name": "Assign Permissions to User",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"permissionIds\": [1, 3, 5]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/permissions", "host": ["{{baseUrl}}"], "path": ["api","users","{{userId}}","permissions"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🛡️ Roles (Admin)",
+      "item": [
+        {
+          "name": "Get All Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/roles", "host": ["{{baseUrl}}"], "path": ["api","roles"] }
+          }
+        },
+        {
+          "name": "Get Role by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api","roles","{{roleId}}"] }
+          }
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"librarian\",\n  \"description\": \"Can manage books and categories\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/roles", "host": ["{{baseUrl}}"], "path": ["api","roles"] }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"librarian\",\n  \"description\": \"Updated description\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api","roles","{{roleId}}"] }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}", "host": ["{{baseUrl}}"], "path": ["api","roles","{{roleId}}"] }
+          }
+        },
+        {
+          "name": "Assign Permissions to Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"permissionIds\": [1, 2, 3]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/roles/{{roleId}}/permissions", "host": ["{{baseUrl}}"], "path": ["api","roles","{{roleId}}","permissions"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔑 Permissions (Admin)",
+      "item": [
+        {
+          "name": "Get All Permissions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/permissions", "host": ["{{baseUrl}}"], "path": ["api","permissions"] }
+          }
+        },
+        {
+          "name": "Get Permission by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/permissions/{{permId}}", "host": ["{{baseUrl}}"], "path": ["api","permissions","{{permId}}"] }
+          }
+        },
+        {
+          "name": "Create Permission",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"manage_books\",\n  \"description\": \"Can create, edit, delete books\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/permissions", "host": ["{{baseUrl}}"], "path": ["api","permissions"] }
+          }
+        },
+        {
+          "name": "Update Permission",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"manage_books\",\n  \"description\": \"Updated description\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/permissions/{{permId}}", "host": ["{{baseUrl}}"], "path": ["api","permissions","{{permId}}"] }
+          }
+        },
+        {
+          "name": "Delete Permission",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/permissions/{{permId}}", "host": ["{{baseUrl}}"], "path": ["api","permissions","{{permId}}"] }
+          }
+        },
+        {
+          "name": "Assign Roles to Permission",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"roleIds\": [1, 2]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/permissions/{{permId}}/roles", "host": ["{{baseUrl}}"], "path": ["api","permissions","{{permId}}","roles"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📚 Books",
+      "item": [
+        {
+          "name": "Get All Books",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/books?page=1&limit=20&search=&categoryId=&authorId=",
+              "host": ["{{baseUrl}}"], "path": ["api","books"],
+              "query": [
+                { "key": "page",       "value": "1" },
+                { "key": "limit",      "value": "20" },
+                { "key": "search",     "value": "" },
+                { "key": "categoryId", "value": "" },
+                { "key": "authorId",   "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Book by ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/books/{{bookId}}", "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}"] }
+          }
+        },
+        {
+          "name": "Get Book AI Summary",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/books/{{bookId}}/summary", "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}","summary"] }
+          }
+        },
+        {
+          "name": "Scan Search (Image Upload)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "scan", "type": "file", "src": "" }]
+            },
+            "url": { "raw": "{{baseUrl}}/api/books/scan-search", "host": ["{{baseUrl}}"], "path": ["api","books","scan-search"] }
+          }
+        },
+        {
+          "name": "Get Book Cover (Public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/books/{{bookId}}/cover", "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}","cover"] }
+          }
+        },
+        {
+          "name": "Get Book PDF URL (Auth Required)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/books/{{bookId}}/pdf-url", "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}","pdf-url"] }
+          }
+        },
+        {
+          "name": "Stream PDF (Public Proxy)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/books/{{bookId}}/stream", "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}","stream"] }
+          }
+        },
+        {
+          "name": "Download PDF (Auth + Records)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/books/{{bookId}}/download", "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}","download"] }
+          }
+        },
+        {
+          "name": "Get Book Download Stats (Admin/Librarian)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/books/{{bookId}}/downloads", "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}","downloads"] }
+          }
+        },
+        {
+          "name": "Create Book (Admin/Librarian)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Introduction to Algorithms\",\n  \"description\": \"A classic CS textbook\",\n  \"isbn\": \"978-0262033848\",\n  \"publicationYear\": 2009,\n  \"coverUrl\": \"https://example.com/cover.jpg\",\n  \"pdfUrl\": \"https://example.com/book.pdf\",\n  \"categoryId\": 1,\n  \"authorIds\": [1],\n  \"publisherId\": 1,\n  \"materialTypeId\": 1,\n  \"departmentId\": 1\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/books", "host": ["{{baseUrl}}"], "path": ["api","books"] }
+          }
+        },
+        {
+          "name": "Update Book (Admin/Librarian)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Introduction to Algorithms (4th Ed)\",\n  \"publicationYear\": 2022\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/books/{{bookId}}", "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}"] }
+          }
+        },
+        {
+          "name": "Delete Book (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/books/{{bookId}}", "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}"] }
+          }
+        },
+        {
+          "name": "Get Book Reviews",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/books/{{bookId}}/reviews?page=1&limit=10",
+              "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}","reviews"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "10" }]
+            }
+          }
+        },
+        {
+          "name": "Create Review for Book",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Excellent book, highly recommended!\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/books/{{bookId}}/reviews", "host": ["{{baseUrl}}"], "path": ["api","books","{{bookId}}","reviews"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🗂️ Categories",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api","categories"] }
+          }
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/categories/{{categoryId}}", "host": ["{{baseUrl}}"], "path": ["api","categories","{{categoryId}}"] }
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Computer Science\",\n  \"description\": \"Books about CS topics\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api","categories"] }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"CS & Software Engineering\",\n  \"description\": \"Updated description\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/categories/{{categoryId}}", "host": ["{{baseUrl}}"], "path": ["api","categories","{{categoryId}}"] }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/categories/{{categoryId}}", "host": ["{{baseUrl}}"], "path": ["api","categories","{{categoryId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "✍️ Authors",
+      "item": [
+        {
+          "name": "Get All Authors",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/authors", "host": ["{{baseUrl}}"], "path": ["api","authors"] }
+          }
+        },
+        {
+          "name": "Get Author by ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/authors/{{authorId}}", "host": ["{{baseUrl}}"], "path": ["api","authors","{{authorId}}"] }
+          }
+        },
+        {
+          "name": "Create Author",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Thomas H. Cormen\",\n  \"bio\": \"Professor of Computer Science at Dartmouth\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/authors", "host": ["{{baseUrl}}"], "path": ["api","authors"] }
+          }
+        },
+        {
+          "name": "Update Author",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Thomas H. Cormen\",\n  \"bio\": \"Updated bio\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/authors/{{authorId}}", "host": ["{{baseUrl}}"], "path": ["api","authors","{{authorId}}"] }
+          }
+        },
+        {
+          "name": "Delete Author",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/authors/{{authorId}}", "host": ["{{baseUrl}}"], "path": ["api","authors","{{authorId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🏢 Publishers",
+      "item": [
+        {
+          "name": "Get All Publishers",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/publishers", "host": ["{{baseUrl}}"], "path": ["api","publishers"] }
+          }
+        },
+        {
+          "name": "Get Publisher by ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/publishers/{{publisherId}}", "host": ["{{baseUrl}}"], "path": ["api","publishers","{{publisherId}}"] }
+          }
+        },
+        {
+          "name": "Create Publisher",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"MIT Press\",\n  \"country\": \"USA\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/publishers", "host": ["{{baseUrl}}"], "path": ["api","publishers"] }
+          }
+        },
+        {
+          "name": "Update Publisher",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"MIT Press\",\n  \"country\": \"United States\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/publishers/{{publisherId}}", "host": ["{{baseUrl}}"], "path": ["api","publishers","{{publisherId}}"] }
+          }
+        },
+        {
+          "name": "Delete Publisher",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/publishers/{{publisherId}}", "host": ["{{baseUrl}}"], "path": ["api","publishers","{{publisherId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📝 Editors",
+      "item": [
+        {
+          "name": "Get All Editors",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/editors", "host": ["{{baseUrl}}"], "path": ["api","editors"] }
+          }
+        },
+        {
+          "name": "Get Editor by ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/editors/{{editorId}}", "host": ["{{baseUrl}}"], "path": ["api","editors","{{editorId}}"] }
+          }
+        },
+        {
+          "name": "Create Editor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Alice Editor\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/editors", "host": ["{{baseUrl}}"], "path": ["api","editors"] }
+          }
+        },
+        {
+          "name": "Update Editor",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Alice Editor Updated\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/editors/{{editorId}}", "host": ["{{baseUrl}}"], "path": ["api","editors","{{editorId}}"] }
+          }
+        },
+        {
+          "name": "Delete Editor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/editors/{{editorId}}", "host": ["{{baseUrl}}"], "path": ["api","editors","{{editorId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📄 Material Types",
+      "item": [
+        {
+          "name": "Get All Material Types",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/material-types", "host": ["{{baseUrl}}"], "path": ["api","material-types"] }
+          }
+        },
+        {
+          "name": "Get Material Type by ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/material-types/{{matTypeId}}", "host": ["{{baseUrl}}"], "path": ["api","material-types","{{matTypeId}}"] }
+          }
+        },
+        {
+          "name": "Create Material Type",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"E-Book\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/material-types", "host": ["{{baseUrl}}"], "path": ["api","material-types"] }
+          }
+        },
+        {
+          "name": "Update Material Type",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Digital Book\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/material-types/{{matTypeId}}", "host": ["{{baseUrl}}"], "path": ["api","material-types","{{matTypeId}}"] }
+          }
+        },
+        {
+          "name": "Delete Material Type",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/material-types/{{matTypeId}}", "host": ["{{baseUrl}}"], "path": ["api","material-types","{{matTypeId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🏫 Departments",
+      "item": [
+        {
+          "name": "Get All Departments",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/departments", "host": ["{{baseUrl}}"], "path": ["api","departments"] }
+          }
+        },
+        {
+          "name": "Get Department by ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/departments/{{deptId}}", "host": ["{{baseUrl}}"], "path": ["api","departments","{{deptId}}"] }
+          }
+        },
+        {
+          "name": "Create Department",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Faculty of Engineering\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/departments", "host": ["{{baseUrl}}"], "path": ["api","departments"] }
+          }
+        },
+        {
+          "name": "Update Department",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Faculty of Engineering & IT\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/departments/{{deptId}}", "host": ["{{baseUrl}}"], "path": ["api","departments","{{deptId}}"] }
+          }
+        },
+        {
+          "name": "Delete Department",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/departments/{{deptId}}", "host": ["{{baseUrl}}"], "path": ["api","departments","{{deptId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "⬇️ Downloads",
+      "item": [
+        {
+          "name": "Get All Downloads (Admin/Librarian)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/downloads?page=1&limit=20",
+              "host": ["{{baseUrl}}"], "path": ["api","downloads"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "Get My Downloads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/downloads/my", "host": ["{{baseUrl}}"], "path": ["api","downloads","my"] }
+          }
+        },
+        {
+          "name": "Get Download Stats (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/downloads/stats", "host": ["{{baseUrl}}"], "path": ["api","downloads","stats"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "⭐ Reviews",
+      "item": [
+        {
+          "name": "Get All Reviews (Admin/Librarian)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews?page=1&limit=20&bookId=&userId=&rating=",
+              "host": ["{{baseUrl}}"], "path": ["api","reviews"],
+              "query": [
+                { "key": "page",   "value": "1" },
+                { "key": "limit",  "value": "20" },
+                { "key": "bookId", "value": "" },
+                { "key": "userId", "value": "" },
+                { "key": "rating", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Reviews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reviews/my", "host": ["{{baseUrl}}"], "path": ["api","reviews","my"] }
+          }
+        },
+        {
+          "name": "Update Review",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Updated review comment\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/reviews/{{reviewId}}", "host": ["{{baseUrl}}"], "path": ["api","reviews","{{reviewId}}"] }
+          }
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/reviews/{{reviewId}}", "host": ["{{baseUrl}}"], "path": ["api","reviews","{{reviewId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📊 Stats",
+      "item": [
+        {
+          "name": "Overview Stats (Admin/Librarian)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/stats/overview", "host": ["{{baseUrl}}"], "path": ["api","stats","overview"] }
+          }
+        },
+        {
+          "name": "Popular Books (Public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/stats/popular", "host": ["{{baseUrl}}"], "path": ["api","stats","popular"] }
+          }
+        },
+        {
+          "name": "Recent Books (Public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/stats/recent", "host": ["{{baseUrl}}"], "path": ["api","stats","recent"] }
+          }
+        },
+        {
+          "name": "Public Stats",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/stats/public", "host": ["{{baseUrl}}"], "path": ["api","stats","public"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "⚙️ Settings",
+      "item": [
+        {
+          "name": "Get All Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/settings", "host": ["{{baseUrl}}"], "path": ["api","settings"] }
+          }
+        },
+        {
+          "name": "Update Settings (Batch)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"settings\": [\n    { \"key\": \"site_name\", \"value\": \"E-Library NU\" },\n    { \"key\": \"max_downloads_per_day\", \"value\": \"10\" }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/settings", "host": ["{{baseUrl}}"], "path": ["api","settings"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📋 Activities (Admin)",
+      "item": [
+        {
+          "name": "Get All Activities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/activities?page=1&limit=20",
+              "host": ["{{baseUrl}}"], "path": ["api","activities"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔔 Push Notifications",
+      "item": [
+        {
+          "name": "Get VAPID Public Key (Public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/push/vapid-public-key", "host": ["{{baseUrl}}"], "path": ["api","push","vapid-public-key"] }
+          }
+        },
+        {
+          "name": "Subscribe to Push Notifications",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endpoint\": \"https://fcm.googleapis.com/fcm/send/...\",\n  \"keys\": {\n    \"p256dh\": \"<p256dh_key>\",\n    \"auth\": \"<auth_key>\"\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/push/subscribe", "host": ["{{baseUrl}}"], "path": ["api","push","subscribe"] }
+          }
+        },
+        {
+          "name": "Unsubscribe from Push Notifications",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endpoint\": \"https://fcm.googleapis.com/fcm/send/...\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/push/unsubscribe", "host": ["{{baseUrl}}"], "path": ["api","push","unsubscribe"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "💬 Feedback",
+      "item": [
+        {
+          "name": "Submit Feedback (Public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"message\": \"Great library platform!\",\n  \"rating\": 5,\n  \"isTestimonial\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/feedback", "host": ["{{baseUrl}}"], "path": ["api","feedback"] }
+          }
+        },
+        {
+          "name": "Get Public Testimonials",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/feedback/public", "host": ["{{baseUrl}}"], "path": ["api","feedback","public"] }
+          }
+        },
+        {
+          "name": "Get All Feedback (Admin/Librarian)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/feedback?page=1&limit=20",
+              "host": ["{{baseUrl}}"], "path": ["api","feedback"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "Get Feedback Stats (Admin/Librarian)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/feedback/stats", "host": ["{{baseUrl}}"], "path": ["api","feedback","stats"] }
+          }
+        },
+        {
+          "name": "Get Feedback by ID (Admin/Librarian)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/feedback/{{feedbackId}}", "host": ["{{baseUrl}}"], "path": ["api","feedback","{{feedbackId}}"] }
+          }
+        },
+        {
+          "name": "Update Feedback (Admin/Librarian)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"reviewed\",\n  \"notes\": \"Acknowledged by admin\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/feedback/{{feedbackId}}", "host": ["{{baseUrl}}"], "path": ["api","feedback","{{feedbackId}}"] }
+          }
+        },
+        {
+          "name": "Delete Feedback (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/feedback/{{feedbackId}}", "host": ["{{baseUrl}}"], "path": ["api","feedback","{{feedbackId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "☁️ Uploads (Admin/Librarian)",
+      "item": [
+        {
+          "name": "Upload Single File",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": "" }]
+            },
+            "url": { "raw": "{{baseUrl}}/api/uploads/single", "host": ["{{baseUrl}}"], "path": ["api","uploads","single"] }
+          }
+        },
+        {
+          "name": "Upload Multiple Files",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "cover", "type": "file", "src": "" },
+                { "key": "pdf",   "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/uploads/multiple", "host": ["{{baseUrl}}"], "path": ["api","uploads","multiple"] }
+          }
+        },
+        {
+          "name": "Delete File",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"fileUrl\": \"https://r2.example.com/path/to/file.pdf\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/uploads/delete", "host": ["{{baseUrl}}"], "path": ["api","uploads","delete"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🤖 AI Recommendations",
+      "item": [
+        {
+          "name": "Recommend by Category",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/recommendations?category=Programming",
+              "host": ["{{baseUrl}}"], "path": ["api","ai","recommendations"],
+              "query": [{ "key": "category", "value": "Programming" }]
+            }
+          }
+        },
+        {
+          "name": "Recommend by Book Title",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/recommendations?bookTitle=Clean+Code",
+              "host": ["{{baseUrl}}"], "path": ["api","ai","recommendations"],
+              "query": [{ "key": "bookTitle", "value": "Clean Code" }]
+            }
+          }
+        },
+        {
+          "name": "Recommend by User History (Auth Required)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/recommendations?userId=current",
+              "host": ["{{baseUrl}}"], "path": ["api","ai","recommendations"],
+              "query": [{ "key": "userId", "value": "current" }]
+            }
+          }
+        },
+        {
+          "name": "Trending Books",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/recommendations/trending?limit=6",
+              "host": ["{{baseUrl}}"], "path": ["api","ai","recommendations","trending"],
+              "query": [{ "key": "limit", "value": "6" }]
+            }
+          }
+        },
+        {
+          "name": "Similar Books by Book ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/ai/recommendations/similar/{{bookId}}", "host": ["{{baseUrl}}"], "path": ["api","ai","recommendations","similar","{{bookId}}"] }
+          }
+        },
+        {
+          "name": "Personalized Recommendations",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"readingHistory\": [\n    { \"title\": \"Clean Code\", \"author\": \"Robert C. Martin\" }\n  ],\n  \"categoryIds\": [1, 3],\n  \"bookId\": 42\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/ai/recommendations/personalized", "host": ["{{baseUrl}}"], "path": ["api","ai","recommendations","personalized"] }
+          }
+        },
+        {
+          "name": "AI Chat (Librarian Assistant)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"What are some good books about machine learning?\",\n  \"context\": {\n    \"currentBook\": \"Clean Code\",\n    \"currentCategory\": \"Programming\"\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/ai/recommendations/chat", "host": ["{{baseUrl}}"], "path": ["api","ai","recommendations","chat"] }
+          }
+        }
+      ]
+    }
+
+  ]
+}

@@ -119,15 +119,14 @@ class UserController {
     }
   }
 
-  // ── PUT /api/users/:id ────────────────────────────────────────────────────
+  // ── PATCH /api/users/:id ────────────────────────────────────────────────────
   static async update(req, res, next) {
     try {
       const user = await User.findByPk(req.params.id);
       if (!user) throw new NotFoundError("User not found");
 
-      const { avatar, firstName, lastName, studentId, email, study_year, isActive, roleIds } = req.body;
-
-      await user.update({ avatar, firstName, lastName, studentId, email, study_year, isActive });
+      const { avatar, firstName, lastName, studentId, email, isActive, roleIds } = req.body;
+      await user.update({ avatar, firstName, lastName, studentId, email, isActive });
 
       if (roleIds !== undefined) {
         const roles = roleIds.length ? await Role.findAll({ where: { id: roleIds } }) : [];
@@ -150,6 +149,7 @@ class UserController {
 
       return ResponseFormatter.success(res, updated, "User updated successfully");
     } catch (err) {
+      console.log(err);
       next(err);
     }
   }
