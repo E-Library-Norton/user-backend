@@ -21,7 +21,7 @@ class FeedbackController {
       // If user is logged in, link feedback to their account
       const userId = req.user?.id ?? null;
       const feedbackName = req.user
-        ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username
+        ? `${req.user.firstName } ${req.user.lastName }`.trim() || req.user.username
         : name?.trim() || 'Anonymous';
       const feedbackEmail = req.user?.email || email?.trim() || null;
 
@@ -98,7 +98,7 @@ class FeedbackController {
         const user = plain.User;
         return {
           id:        plain.id,
-          name:      user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : plain.name,
+          name:      user ? `${user.firstName } ${user.lastName }`.trim() || user.username : plain.name,
           avatar:    user?.avatar || null,
           message:   plain.message,
           rating:    plain.rating,

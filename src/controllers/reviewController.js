@@ -47,7 +47,7 @@ function buildReviewPayload(review, book, user) {
     bookId:    book?.id ?? review.bookId,
     bookTitle: book?.title ?? 'Unknown',
     bookCover: book?.coverUrl ?? null,
-    userName:  user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username : 'A member',
+    userName:  user ? `${user.firstName } ${user.lastName }`.trim() || user.username : 'A member',
     userAvatar: user?.avatar ?? null,
     averageRating: null, // filled async below
     totalReviews:  null,

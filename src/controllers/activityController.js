@@ -73,7 +73,7 @@ class ActivityController {
 
             const activities = rows.map(act => {
                 const fullName = act.User ?
-                    (`${act.User.firstName || ''} ${act.User.lastName || ''}`).trim() || act.User.username :
+                    (`${act.User.firstName } ${act.User.lastName }`).trim() || act.User.username :
                     "System";
 
                 return {

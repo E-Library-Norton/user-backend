@@ -174,7 +174,7 @@ class StatsController {
             // 2. Material type counts
             const typeCounts = { theses: 0, journals: 0, articles: 0 };
             for (const row of typeRows) {
-                const name = (row.MaterialType?.name || '').toLowerCase();
+                const name = (row.MaterialType?.name ).toLowerCase();
                 const cnt = parseInt(row.count) || 0;
                 if (name.includes('thesis') || name.includes('dissertation')) typeCounts.theses += cnt;
                 else if (name.includes('journal')) typeCounts.journals += cnt;
@@ -228,7 +228,7 @@ class StatsController {
             // 5. Recent activities
             const recentActivities = activities.map(act => {
                 const fullName = act.User
-                    ? (`${act.User.firstName || ''} ${act.User.lastName || ''}`).trim() || act.User.username
+                    ? (`${act.User.firstName } ${act.User.lastName }`).trim() || act.User.username
                     : "System";
                 return {
                     id: act.id,

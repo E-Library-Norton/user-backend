@@ -75,7 +75,7 @@ class AuthController {
 
       return ResponseFormatter.success(res, {
         user: {
-          id: user.id, avatar: user.avatar || '', username: user.username,
+          id: user.id, avatar: user.avatar , username: user.username,
           email: user.email, studentId: user.studentId,
           firstName: user.firstName, lastName: user.lastName,
           roles: user.Roles.map(r => r.name),

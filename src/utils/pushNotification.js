@@ -10,8 +10,8 @@ const webpush = require('web-push');
 const { PushSubscription } = require('../models');
 
 // ── VAPID setup ───────────────────────────────────────────────────────────────
-const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  ;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY ;
 const VAPID_EMAIL       = process.env.VAPID_EMAIL       || 'mailto:admin@elibrary.edu.kh';
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {

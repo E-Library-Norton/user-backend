@@ -19,7 +19,7 @@ class UserController {
       const page = Math.max(parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE, 1);
       const limit = Math.min(parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT);
       const offset = (page - 1) * limit;
-      const search = req.query.search || '';
+      const search = req.query.search ;
 
       const where = { isDeleted: false };
       if (search) {
@@ -104,7 +104,7 @@ class UserController {
         action: "created",
         targetType: "user",
         targetId: user.id,
-        targetName: `${firstName || ''} ${lastName || ''}`.trim() || username,
+        targetName: `${firstName } ${lastName }`.trim() || username,
         ipAddress: req.ip,
         userAgent: req.get("user-agent"),
       });
@@ -138,7 +138,7 @@ class UserController {
         action: "updated",
         targetType: "user",
         targetId: user.id,
-        targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        targetName: `${user.firstName } ${user.lastName }`.trim() || user.username,
         ipAddress: req.ip,
         userAgent: req.get("user-agent"),
       });
@@ -171,7 +171,7 @@ class UserController {
         action: "deleted",
         targetType: "user",
         targetId: user.id,
-        targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        targetName: `${user.firstName } ${user.lastName }`.trim() || user.username,
         ipAddress: req.ip,
         userAgent: req.get("user-agent"),
       });
@@ -201,7 +201,7 @@ class UserController {
         action: "updated",
         targetType: "user",
         targetId: user.id,
-        targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        targetName: `${user.firstName } ${user.lastName }`.trim() || user.username,
         details: { roleIds },
         ipAddress: req.ip,
         userAgent: req.get("user-agent"),
@@ -235,7 +235,7 @@ class UserController {
         action: "updated",
         targetType: "user",
         targetId: user.id,
-        targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        targetName: `${user.firstName } ${user.lastName }`.trim() || user.username,
         details: { permissionIds },
         ipAddress: req.ip,
         userAgent: req.get("user-agent"),
@@ -300,7 +300,7 @@ class UserController {
         action: 'updated',
         targetType: 'user',
         targetId: user.id,
-        targetName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        targetName: `${user.firstName } ${user.lastName }`.trim() || user.username,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
       });
