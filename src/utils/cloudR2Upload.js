@@ -6,7 +6,7 @@ const path = require('path');
 const BUCKET     = process.env.R2_BUCKET;
 // R2_PUBLIC_URL  = base URL for publicly accessible files, e.g. https://pub-xxx.r2.dev
 // Leave empty to fall back to path-style endpoint URL.
-const PUBLIC_URL = (process.env.R2_PUBLIC_URL ).replace(/\/$/, '');
+const PUBLIC_URL = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '');
 
 // ─── MIME / folder / resource-type maps (unchanged) ─────────────────────────
 const MIME_TO_EXT = {
@@ -75,7 +75,7 @@ function buildPublicId(originalName, mimetype, resourceType, folder) {
 function getPublicUrl(key) {
   if (PUBLIC_URL) return `${PUBLIC_URL}/${key}`;
   // Fallback: path-style R2 URL
-  const endpoint = (process.env.R2_ENDPOINT ).replace(/\/$/, '');
+  const endpoint = (process.env.R2_ENDPOINT || '').replace(/\/$/, '');
   return `${endpoint}/${BUCKET}/${key}`;
 }
 
@@ -90,7 +90,7 @@ function extractKeyFromUrl(url) {
     return url.slice(PUBLIC_URL.length + 1);
   }
   // Match against path-style endpoint: https://<account>.r2.cloudflarestorage.com/<bucket>/<key>
-  const endpoint = (process.env.R2_ENDPOINT ).replace(/\/$/, '');
+  const endpoint = (process.env.R2_ENDPOINT || '').replace(/\/$/, '');
   const prefix   = `${endpoint}/${BUCKET}/`;
   if (url.startsWith(prefix)) return url.slice(prefix.length);
   return null;
