@@ -41,6 +41,8 @@ services:
       dockerfile: Dockerfile
     container_name: elibrary-api
     restart: unless-stopped
+    env_file:
+      - .env.local
     depends_on:
       db:
         condition: service_healthy
@@ -50,13 +52,9 @@ services:
       NODE_ENV:                production
       PORT:                    5005
 
-      # ── Database (connects to the 'db' service via Docker network) ──────
-      # For local Docker: use this internal connection (no SSL needed)
-      DATABASE_URL: postgresql://${POSTGRES_USER:-elibrary}:${POSTGRES_PASSWORD:-elibrary_secret}@db:5432/${POSTGRES_DB:-nu_elibrary_db}
-
-      # Set to "false" for local Docker (no SSL between containers)
-      # Set to "true" for Render managed DB or any external SSL DB
-      DB_SSL:                  ${DB_SSL:-false}
+      # ── Database (Render managed PostgreSQL — SSL required) ────────────
+      DATABASE_URL: postgresql://nu_elibrary_db_nvwp_user:zzLVgQV0KU6OXiZ0znDaEmRFnDo90eki@dpg-d7h07ej7uimc73d1o6qg-a.singapore-postgres.render.com/nu_elibrary_db_nvwp
+      DB_SSL:                  true
 
       # ── Auth secrets ────────────────────────────────────────────────────
       ACCESS_TOKEN_SECRET:     ${ACCESS_TOKEN_SECRET}
