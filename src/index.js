@@ -9,6 +9,7 @@ const morgan      = require("morgan");
 const compression = require("compression");
 const { sequelize } = require("./config/database");
 const { initSocket } = require('./utils/socket');
+const { passport } = require('./config/passport');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -44,6 +45,7 @@ app.use(cors({
 
 app.use(compression());  // gzip/brotli — 30–70% smaller responses
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(passport.initialize());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 if (process.env.NODE_ENV !== 'production') {

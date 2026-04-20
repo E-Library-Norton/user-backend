@@ -5,6 +5,8 @@ const AuthController   = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 const { userValidation } = require('../middleware/validation');
 const { MAX_FILE_SIZES, FILE_TYPES } = require('../config/constants');
+const { passport, FRONTEND_URL } = require('../config/passport');
+const jwt = require('jsonwebtoken');
 
 // Memory-based multer for avatar (Cloudinary needs buffer)
 const avatarUpload = multer({
@@ -41,5 +43,44 @@ router.post('/2fa/regenerate-recovery',  authenticate, TwoFactorController.regen
 router.get('/2fa/status',                authenticate, TwoFactorController.status);
 router.post('/2fa/face/enroll',    authenticate, TwoFactorController.enrollFace);
 router.post('/2fa/face/verify',                  TwoFactorController.verifyFace);   // no auth during login
+
+// ── OAuth helper: generate tokens & redirect to frontend ────────────────────
+function oauthCallback(provider) {
+  return (req, res, next) => {
+    passport.authenticate(provider, { session: false }, (err, user) => {
+      if (err || !user) {
+        return res.redirect(`${FRONTEND_URL}/auth/signin?error=oauth_failed`);
+      }
+      const roles = (user.Roles || []).map(r => r.name);
+      const accessToken = jwt.sign(
+        { id: user.id, username: user.username, email: user.email, studentId: user.studentId, roles },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '30d' },
+      );
+      const refreshToken = jwt.sign(
+        { id: user.id },
+        process.env.REFRESH_TOKEN_SECRET,
+        { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '60d' },
+      );
+      const params = new URLSearchParams({ accessToken, refreshToken });
+      return res.redirect(`${FRONTEND_URL}/auth/callback?${params.toString()}`);
+    })(req, res, next);
+  };
+}
+
+// ── Google ────────────────────────────────────────────────────────────────────
+router.get('/google',
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
+router.get('/google/callback', oauthCallback('google'));
+
+// ── Facebook ──────────────────────────────────────────────────────────────────
+router.get('/facebook',
+  passport.authenticate('facebook', { scope: ['email'], session: false }));
+router.get('/facebook/callback', oauthCallback('facebook'));
+
+// ── GitHub ────────────────────────────────────────────────────────────────────
+router.get('/github',
+  passport.authenticate('github', { scope: ['user:email'], session: false }));
+router.get('/github/callback', oauthCallback('github'));
 
 module.exports = router;

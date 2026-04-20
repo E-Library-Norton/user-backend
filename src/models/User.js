@@ -29,7 +29,19 @@ const User = sequelize.define(
     },
     password: {
       type: DataTypes.STRING(256),
-      allowNull: false,
+      allowNull: true,   // null for OAuth-only users
+    },
+    oauthProvider: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      defaultValue: null,
+      field: 'oauth_provider',
+    },
+    oauthId: {
+      type: DataTypes.STRING(256),
+      allowNull: true,
+      defaultValue: null,
+      field: 'oauth_id',
     },
     studentId: {
       type: DataTypes.STRING(50),
