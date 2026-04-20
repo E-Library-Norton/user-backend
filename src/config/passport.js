@@ -10,7 +10,11 @@ const BACKEND_URL  = process.env.BACKEND_URL  || 'http://localhost:5005';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // Skip strategies with placeholder values like "...", "your_xxx", etc.
-const isReal = (v) => v && v.length > 5 && !v.startsWith('...');
+const isReal = (v) => {
+  if (!v) return false;
+  const s = String(v).trim();
+  return s.length > 8 && !s.startsWith('...') && !s.startsWith('your_');
+};
 
 // ── Helper: find or create OAuth user ────────────────────────────────────────
 async function findOrCreateOAuthUser({ provider, oauthId, email, firstName, lastName, avatar }) {
