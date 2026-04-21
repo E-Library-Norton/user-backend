@@ -6,8 +6,8 @@ const GitHubStrategy  = require('passport-github2').Strategy;
 const { Op }          = require('sequelize');
 const { User, Role }  = require('../models');
 
-const BACKEND_URL  = process.env.BACKEND_URL  || 'http://localhost:5005';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const BACKEND_URL  = process.env.BACKEND_URL  ;
+const FRONTEND_URL = process.env.FRONTEND_URL ;
 
 // Skip strategies with placeholder values like "...", "your_xxx", etc.
 const isReal = (v) => {
@@ -83,17 +83,18 @@ if (isReal(process.env.GOOGLE_CLIENT_ID) && isReal(process.env.GOOGLE_CLIENT_SEC
 if (isReal(process.env.FACEBOOK_APP_ID) && isReal(process.env.FACEBOOK_APP_SECRET)) {
   passport.use(new FacebookStrategy(
     {
-      clientID:     process.env.FACEBOOK_APP_ID,
-      clientSecret: process.env.FACEBOOK_APP_SECRET,
-      callbackURL:  `${BACKEND_URL}/api/auth/facebook/callback`,
+      clientID:      process.env.FACEBOOK_APP_ID,
+      clientSecret:  process.env.FACEBOOK_APP_SECRET,
+      callbackURL:   `${BACKEND_URL}/api/auth/facebook/callback`,
       profileFields: ['id', 'emails', 'name', 'photos'],
+      enableProof:   true,
     },
     async (_accessToken, _refreshToken, profile, done) => {
       try {
-        const email     = profile.emails?.[0]?.value;
-        const firstName = profile.name?.givenName;
-        const lastName  = profile.name?.familyName;
-        const avatar    = profile.photos?.[0]?.value;
+        const email     = profile.emails?.[0]?.value ?? null;
+        const firstName = profile.name?.givenName  ?? null;
+        const lastName  = profile.name?.familyName ?? null;
+        const avatar    = profile.photos?.[0]?.value ?? null;
         const user = await findOrCreateOAuthUser({ provider: 'facebook', oauthId: profile.id, email, firstName, lastName, avatar });
         done(null, user);
       } catch (err) { done(err, null); }

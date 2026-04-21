@@ -8,7 +8,7 @@ const { MAX_FILE_SIZES, FILE_TYPES } = require('../config/constants');
 const { passport, FRONTEND_URL } = require('../config/passport');
 const jwt = require('jsonwebtoken');
 
-// Memory-based multer for avatar (Cloudinary needs buffer)
+// Memory-based multer for avatar (R2 needs buffer)
 const avatarUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZES.IMAGE },
@@ -32,7 +32,7 @@ router.post('/forgot-password', AuthController.forgotPassword);
 router.post('/verify-otp',      AuthController.verifyOtp);
 router.post('/reset-password',  AuthController.resetPassword);
 
-// ── Two-Factor Authentication ─────────────────────────────────────────────────
+// ── Two-Factor Authentication 
 const TwoFactorController = require('../controllers/twoFactorController');
 
 router.post('/2fa/setup',          authenticate, TwoFactorController.setup);
@@ -68,17 +68,17 @@ function oauthCallback(provider) {
   };
 }
 
-// ── Google ────────────────────────────────────────────────────────────────────
+// ── Google 
 router.get('/google',
   passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
 router.get('/google/callback', oauthCallback('google'));
 
-// ── Facebook ──────────────────────────────────────────────────────────────────
+// ── Facebook 
 router.get('/facebook',
-  passport.authenticate('facebook', { scope: ['email'], session: false }));
+  passport.authenticate('facebook', { scope: ['public_profile', 'email'], session: false }));
 router.get('/facebook/callback', oauthCallback('facebook'));
 
-// ── GitHub ────────────────────────────────────────────────────────────────────
+// ── GitHub 
 router.get('/github',
   passport.authenticate('github', { scope: ['user:email'], session: false }));
 router.get('/github/callback', oauthCallback('github'));
