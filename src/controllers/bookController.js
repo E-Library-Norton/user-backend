@@ -245,10 +245,16 @@ class BookController {
       // Files are pre-uploaded via POST /api/upload/single — accept URLs from body
       const coverUrl = req.body.coverUrl ?? null;
       const pdfUrl   = req.body.pdfUrl   ?? null;
+      // pdfUrls: optional array of additional PDF URLs
+      let pdfUrls = req.body.pdfUrls ?? null;
+      if (typeof pdfUrls === 'string') {
+        try { pdfUrls = JSON.parse(pdfUrls); } catch { pdfUrls = null; }
+      }
+      if (!Array.isArray(pdfUrls)) pdfUrls = null;
 
       const book = await Book.create({
         title, titleKh, isbn, publicationYear, description,
-        coverUrl, pdfUrl, pages,
+        coverUrl, pdfUrl, pdfUrls, pages,
         categoryId, publisherId, departmentId, typeId, isActive,
       });
 
@@ -396,6 +402,12 @@ class BookController {
       // Files are pre-uploaded via POST /api/upload/single — accept URLs from body
       const coverUrl = req.body.coverUrl;
       const pdfUrl   = req.body.pdfUrl;
+      // pdfUrls: optional array of additional PDF URLs
+      let pdfUrls = req.body.pdfUrls;
+      if (typeof pdfUrls === 'string') {
+        try { pdfUrls = JSON.parse(pdfUrls); } catch { pdfUrls = undefined; }
+      }
+      if (pdfUrls !== undefined && !Array.isArray(pdfUrls)) pdfUrls = undefined;
 
       await book.update({
         ...(title !== undefined && { title }),
@@ -405,6 +417,7 @@ class BookController {
         ...(description !== undefined && { description }),
         ...(coverUrl !== undefined && { coverUrl }),
         ...(pdfUrl !== undefined && { pdfUrl }),
+        ...(pdfUrls !== undefined && { pdfUrls }),
         ...(pages !== undefined && { pages }),
         ...(categoryId !== undefined && { categoryId }),
         ...(publisherId !== undefined && { publisherId }),

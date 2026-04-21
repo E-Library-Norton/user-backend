@@ -40,6 +40,13 @@ const Book = sequelize.define(
       type:  DataTypes.STRING(500),
       field: 'pdf_url',
     },
+    pdfUrls: {
+      type:         DataTypes.JSONB,
+      field:        'pdf_urls',
+      allowNull:    true,
+      defaultValue: null,
+      comment:      'Array of additional PDF file URLs',
+    },
     pages: {
       type: DataTypes.INTEGER,
     },
