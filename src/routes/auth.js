@@ -48,7 +48,12 @@ router.post('/2fa/face/verify',                  TwoFactorController.verifyFace)
 function oauthCallback(provider) {
   return (req, res, next) => {
     passport.authenticate(provider, { session: false }, (err, user) => {
-      if (err || !user) {
+      if (err) {
+        console.error(`[OAuth:${provider}] error:`, err.message || err);
+        return res.redirect(`${FRONTEND_URL}/auth/signin?error=oauth_failed`);
+      }
+      if (!user) {
+        console.error(`[OAuth:${provider}] no user returned`);
         return res.redirect(`${FRONTEND_URL}/auth/signin?error=oauth_failed`);
       }
       const roles = (user.Roles || []).map(r => r.name);
@@ -75,7 +80,7 @@ router.get('/google/callback', oauthCallback('google'));
 
 // ── Facebook 
 router.get('/facebook',
-  passport.authenticate('facebook', { scope: ['public_profile', 'email'], session: false }));
+  passport.authenticate('facebook', { scope: ['public_profile'], session: false }));
 router.get('/facebook/callback', oauthCallback('facebook'));
 
 // ── GitHub 
