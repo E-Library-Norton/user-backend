@@ -31,6 +31,9 @@ class UserController {
           { studentId: { [Op.iLike]: `%${search}%` } },
         ];
       }
+      if (req.query.isActive !== undefined) {
+        where.isActive = req.query.isActive === 'true';
+      }
 
       // Count without JOIN to avoid row-inflation from multiple roles per user
       const count = await User.count({ where });
@@ -126,7 +129,14 @@ class UserController {
       if (!user) throw new NotFoundError("User not found");
 
       const { avatar, firstName, lastName, studentId, email, isActive, roleIds } = req.body;
-      await user.update({ avatar, firstName, lastName, studentId, email, isActive });
+      await user.update({
+        avatar,
+        firstName,
+        lastName,
+        studentId: studentId === '' ? null : studentId,
+        email,
+        isActive,
+      });
 
       if (roleIds !== undefined) {
         const roles = roleIds.length ? await Role.findAll({ where: { id: roleIds } }) : [];
