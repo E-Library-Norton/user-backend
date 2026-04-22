@@ -72,6 +72,8 @@ class ActivityController {
                     subQuery: false,
                 }),
             ]);
+
+            const activities = rows.map(act => {
                 const fullName = act.User ?
                     (`${act.User.firstName } ${act.User.lastName }`).trim() || act.User.username :
                     "System";
