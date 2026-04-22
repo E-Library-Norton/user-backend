@@ -36,6 +36,7 @@ class StatsController {
                     Book.count({ where: { isDeleted: false } }).catch(() => 0),
                     User.count({ where: { isDeleted: false } }).catch(() => 0),
                     User.count({ where: { isActive: true, isDeleted: false } }).catch(() => 0),
+                    Author.count().catch(() => 0),
                     Category.count().catch(() => 0),
                     Download.count().catch(() => 0),
                 ]);
@@ -266,6 +267,7 @@ class StatsController {
                 total_journals: typeCounts.journals,
                 total_authors: totalAuthors,
                 total_categories: totalCategories,
+                total_downloads: totalDownloads,
                 total_articles: typeCounts.articles,
                 upload_stats: uploadStats,
                 category_stats: categoryDistribution,
