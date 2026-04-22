@@ -291,6 +291,36 @@ class ReviewController {
     }
   }
 
+  // ── GET /api/reviews/stats  (admin) ─────────────────────────────────────────
+  static async getStats(req, res, next) {
+    try {
+      const total = await Review.count({ where: { isDeleted: false } });
+
+      const ratingRows = await Review.findAll({
+        where: { isDeleted: false },
+        attributes: ['rating', [fn('COUNT', col('id')), 'count']],
+        group: ['rating'],
+        raw: true,
+      });
+
+      const byRating = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      for (const row of ratingRows) {
+        byRating[row.rating] = Number(row.count);
+      }
+
+      const avgResult = await Review.findOne({
+        where: { isDeleted: false },
+        attributes: [[fn('AVG', col('rating')), 'avg']],
+        raw: true,
+      });
+      const averageRating = avgResult?.avg ? Number(Number(avgResult.avg).toFixed(1)) : null;
+
+      return ResponseFormatter.success(res, { total, byRating, averageRating });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ── GET /api/reviews  (admin — all reviews with filters) ────────────────────
   static async getAll(req, res, next) {
     try {
@@ -303,16 +333,63 @@ class ReviewController {
       if (req.query.userId)  where.userId = req.query.userId;
       if (req.query.rating)  where.rating = Number(req.query.rating);
 
-      const { count, rows } = await Review.findAndCountAll({
+      const search = req.query.search?.trim();
+
+      // Build include — always fetch full User/Book data, no WHERE on includes
+      // (search filtering is handled via searchWhere on the main query below)
+      const bookInclude = {
+        model: Book,
+        as: 'Book',
+        attributes: ['id', 'title', 'titleKh', 'coverUrl'],
+      };
+      const userInclude = {
+        model: User,
+        as: 'User',
+        attributes: ['id', 'firstName', 'lastName', 'username', 'avatar'],
+      };
+
+      // When searching, include rows that match EITHER the book title OR the username
+      let queryOptions = {
         where,
-        include: [
-          { model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'username', 'avatar'] },
-          { model: Book, as: 'Book', attributes: ['id', 'title', 'titleKh', 'coverUrl'] },
-        ],
+        include: [userInclude, bookInclude],
         order: [['created_at', 'DESC']],
         limit,
         offset,
-      });
+        distinct: true,
+      };
+
+      if (search) {
+        // We need to join and filter: keep rows where Book title OR User username matches
+        // Use subquery approach: fetch all matching IDs first
+        const bookIds   = (await Book.findAll({ where: { title: { [Op.iLike]: `%${search}%` } }, attributes: ['id'], raw: true })).map((b) => b.id);
+        const userIds   = (await User.findAll({
+          where: {
+            [Op.or]: [
+              { username:  { [Op.iLike]: `%${search}%` } },
+              { firstName: { [Op.iLike]: `%${search}%` } },
+              { lastName:  { [Op.iLike]: `%${search}%` } },
+            ],
+          },
+          attributes: ['id'],
+          raw: true,
+        })).map((u) => u.id);
+
+        const searchWhere = {
+          ...where,
+          [Op.or]: [
+            ...(bookIds.length ? [{ bookId: { [Op.in]: bookIds } }] : []),
+            ...(userIds.length ? [{ userId: { [Op.in]: userIds } }] : []),
+          ],
+        };
+
+        if (!bookIds.length && !userIds.length) {
+          return ResponseFormatter.success(res, { reviews: [], total: 0, totalPages: 0, currentPage: page });
+        }
+
+        queryOptions = { ...queryOptions, where: searchWhere };
+      }
+
+      const { count, rows } = await Review.findAndCountAll(queryOptions);
 
       return ResponseFormatter.success(res, {
         reviews:     rows,

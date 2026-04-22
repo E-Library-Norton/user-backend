@@ -7,6 +7,9 @@ const { authenticate, authorize } = require('../middleware/auth');
 // GET /api/reviews?page=1&limit=20&bookId=&userId=&rating=
 router.get('/', authenticate, authorize('admin', 'librarian'), ReviewController.getAll);
 
+// ── Admin stats ───────────────────────────────────────────────────────────────
+router.get('/stats', authenticate, authorize('admin', 'librarian'), ReviewController.getStats);
+
 // ── Authenticated user's own reviews ─────────────────────────────────────────
 router.get('/my', authenticate, ReviewController.getMyReviews);
 
