@@ -31,11 +31,11 @@ class StatsController {
             }
 
             // 1. Basic counts — run in parallel
-            const [totalBooks, totalMembers, totalAuthors, totalCategories, totalDownloads] =
-                await Promise.all([
+            const [totalBooks, totalMembers, totalActiveMembers, totalAuthors, totalCategories, totalDownloads] =
+                    await Promise.all([
                     Book.count({ where: { isDeleted: false } }).catch(() => 0),
                     User.count({ where: { isDeleted: false } }).catch(() => 0),
-                    Author.count().catch(() => 0),
+                    User.count({ where: { isActive: true, isDeleted: false } }).catch(() => 0),
                     Category.count().catch(() => 0),
                     Download.count().catch(() => 0),
                 ]);
@@ -262,6 +262,7 @@ class StatsController {
                 total_books: totalBooks,
                 total_theses: typeCounts.theses,
                 total_members: totalMembers,
+                total_active_members: totalActiveMembers,
                 total_journals: typeCounts.journals,
                 total_authors: totalAuthors,
                 total_categories: totalCategories,

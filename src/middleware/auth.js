@@ -3,6 +3,26 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 
+// ── 30s user cache — avoids hitting DB on every request ─────────────────────
+const _userCache = new Map(); // userId → { user, ts }
+const USER_CACHE_TTL = 30_000; // 30 seconds
+
+function getCachedUser(userId) {
+  const entry = _userCache.get(userId);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > USER_CACHE_TTL) { _userCache.delete(userId); return null; }
+  return entry.user;
+}
+function setCachedUser(userId, user) {
+  if (_userCache.size > 2000) { // cap at 2k entries
+    _userCache.delete(_userCache.keys().next().value);
+  }
+  _userCache.set(userId, { user, ts: Date.now() });
+}
+/** Call this after role/status changes so the next request gets fresh data */
+function invalidateUserCache(userId) { _userCache.delete(userId); }
+
+
 // ── authenticate ──────────────────────────────────────────────────────────────
 // Optimized: verify JWT first (sync, ~0ms) before hitting DB
 const authenticate = async (req, res, next) => {
@@ -22,15 +42,18 @@ const authenticate = async (req, res, next) => {
       return ResponseFormatter.unauthorized(res, 'Invalid or expired token');
     }
 
-    // 2. Only hit DB if token is valid
-    const user = await User.findByPk(decoded.id, {
-      include: [
-        { association: 'Roles', through: { attributes: [] } },
-        { association: 'Permissions', through: { attributes: [] } },
-      ],
-      // ✅ Only select columns you actually need
-      attributes: ['id', 'avatar', 'username', 'email', 'studentId', 'firstName', 'lastName', 'isActive'],
-    });
+    // 2. Only hit DB if token is valid — use 30s cache to avoid DB on every request
+    let user = getCachedUser(decoded.id);
+    if (!user) {
+      user = await User.findByPk(decoded.id, {
+        include: [
+          { association: 'Roles', through: { attributes: [] } },
+          { association: 'Permissions', through: { attributes: [] } },
+        ],
+        attributes: ['id', 'avatar', 'username', 'email', 'studentId', 'firstName', 'lastName', 'isActive'],
+      });
+      if (user?.isActive) setCachedUser(decoded.id, user);
+    }
 
     if (!user?.isActive) {
       return ResponseFormatter.unauthorized(res, 'Invalid authentication');
@@ -120,4 +143,4 @@ const authenticateStream = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate, authorize, requirePermission, optionalAuth, authenticateStream };
+module.exports = { authenticate, authorize, requirePermission, optionalAuth, authenticateStream, invalidateUserCache };

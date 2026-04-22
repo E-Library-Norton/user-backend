@@ -1,6 +1,7 @@
 // src/controllers/userController.js
 const { Op } = require("sequelize");
 const { User, Role, Permission } = require("../models");
+const { invalidateUserCache } = require('../middleware/auth');
 const ResponseFormatter = require("../utils/responseFormatter");
 const Logger = require("../utils/logger");
 const { PAGINATION } = require("../config/constants");
@@ -157,6 +158,7 @@ class UserController {
         include: [{ association: "Roles", through: { attributes: [] } }],
       });
 
+      invalidateUserCache(user.id); // clear 30s auth cache so role/status change takes effect
       return ResponseFormatter.success(res, updated, "User updated successfully");
     } catch (err) {
       console.log(err);

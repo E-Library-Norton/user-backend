@@ -292,28 +292,29 @@ class ReviewController {
   }
 
   // ── GET /api/reviews/stats  (admin) ─────────────────────────────────────────
+  // Single query: GROUP BY rating gives us count-per-rating AND avg in one round-trip
   static async getStats(req, res, next) {
     try {
-      const total = await Review.count({ where: { isDeleted: false } });
-
       const ratingRows = await Review.findAll({
         where: { isDeleted: false },
-        attributes: ['rating', [fn('COUNT', col('id')), 'count']],
+        attributes: [
+          'rating',
+          [fn('COUNT', col('id')), 'count'],
+        ],
         group: ['rating'],
         raw: true,
       });
 
       const byRating = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      let total = 0;
+      let weightedSum = 0;
       for (const row of ratingRows) {
-        byRating[row.rating] = Number(row.count);
+        const cnt = Number(row.count);
+        byRating[row.rating] = cnt;
+        total += cnt;
+        weightedSum += row.rating * cnt;
       }
-
-      const avgResult = await Review.findOne({
-        where: { isDeleted: false },
-        attributes: [[fn('AVG', col('rating')), 'avg']],
-        raw: true,
-      });
-      const averageRating = avgResult?.avg ? Number(Number(avgResult.avg).toFixed(1)) : null;
+      const averageRating = total > 0 ? Number((weightedSum / total).toFixed(1)) : null;
 
       return ResponseFormatter.success(res, { total, byRating, averageRating });
     } catch (error) {

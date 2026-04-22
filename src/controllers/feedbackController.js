@@ -1,5 +1,5 @@
 // controllers/feedbackController.js
-const { Op } = require('sequelize');
+const { Op, fn, col } = require('sequelize');
 const { Feedback, User } = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { logActivity } = require('../utils/activityLogger');
@@ -173,12 +173,12 @@ class FeedbackController {
       const [total, byStatus, byType] = await Promise.all([
         Feedback.count(),
         Feedback.findAll({
-          attributes: ['status', [require('sequelize').fn('COUNT', '*'), 'count']],
+          attributes: ['status', [fn('COUNT', col('id')), 'count']],
           group: ['status'],
           raw: true,
         }),
         Feedback.findAll({
-          attributes: ['type', [require('sequelize').fn('COUNT', '*'), 'count']],
+          attributes: ['type', [fn('COUNT', col('id')), 'count']],
           group: ['type'],
           raw: true,
         }),

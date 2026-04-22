@@ -8,16 +8,13 @@ class ActivityController {
      */
     static async getActivities(req, res, next) {
         try {
-            const {
-                page = 1,
-                limit = 10,
-                type = 'all',
-                search = '',
-                userId = null,
-                days = null
-            } = req.query;
-
-            const offset = (page - 1) * limit;
+            const pageNum  = Math.max(1, parseInt(req.query.page)  || 1);
+            const limitNum = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+            const offset   = (pageNum - 1) * limitNum;
+            const type     = req.query.type   || 'all';
+            const search   = req.query.search || '';
+            const userId   = req.query.userId || null;
+            const days     = req.query.days   || null;
 
             // Build where clause
             const where = {};
@@ -47,31 +44,34 @@ class ActivityController {
 
             if (search) {
                 where[Op.or] = [
-                    { action: { [Op.like]: `%${search}%` } },
-                    { targetName: { [Op.like]: `%${search}%` } },
-                    { '$User.firstName$': { [Op.like]: `%${search}%` } },
-                    { '$User.lastName$': { [Op.like]: `%${search}%` } },
-                    { '$User.username$': { [Op.like]: `%${search}%` } }
+                    { action:     { [Op.iLike]: `%${search}%` } },
+                    { targetName: { [Op.iLike]: `%${search}%` } },
+                    { '$User.firstName$': { [Op.iLike]: `%${search}%` } },
+                    { '$User.lastName$':  { [Op.iLike]: `%${search}%` } },
+                    { '$User.username$':  { [Op.iLike]: `%${search}%` } },
                 ];
             }
 
-            const { count, rows } = await Activity.findAndCountAll({
-                where,
-                include: [
-                    {
-                        model: User,
-                        as: 'User',
-                        attributes: ['id', 'username', 'email', 'firstName', 'lastName'],
-                        include: [{ model: Role, as: 'Roles', attributes: ['name'] }]
-                    }
-                ],
-                order: [['createdAt', 'DESC']],
-                limit: parseInt(limit),
-                offset: parseInt(offset),
-                subQuery: false // Necessary for nested include with limit
-            });
+            const userInclude = {
+                model: User,
+                as: 'User',
+                attributes: ['id', 'username', 'email', 'firstName', 'lastName'],
+                include: [{ model: Role, as: 'Roles', attributes: ['name'] }],
+                required: false,
+            };
 
-            const activities = rows.map(act => {
+            // Two-query approach: accurate count + paginated rows (avoids inflation from JOINs)
+            const [count, rows] = await Promise.all([
+                Activity.count({ where, include: [{ ...userInclude, required: !!search }] }),
+                Activity.findAll({
+                    where,
+                    include: [userInclude],
+                    order: [['createdAt', 'DESC']],
+                    limit:  limitNum,
+                    offset,
+                    subQuery: false,
+                }),
+            ]);
                 const fullName = act.User ?
                     (`${act.User.firstName } ${act.User.lastName }`).trim() || act.User.username :
                     "System";
@@ -98,10 +98,10 @@ class ActivityController {
                 activities,
                 pagination: {
                     total: count,
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    totalPages: Math.ceil(count / limit)
-                }
+                    page:  pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(count / limitNum),
+                },
             });
         } catch (error) {
             next(error);
