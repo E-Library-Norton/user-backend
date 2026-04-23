@@ -21,7 +21,9 @@ const ALLOWED_ORIGINS = [
   'https://elibrary-dashboard.vercel.app',
   'https://frontend-admin-dev.vercel.app',
   'https://frontend.samnangchan.shop',
-  'https://admin-elibrary.samnangchan.shop'
+  'https://admin-elibrary.samnangchan.shop',
+  'https://elibrary.nortonu.app',
+  'https://admin-elibrary.nortonu.app',
 ];
 
 // ── Socket.IO (real-time) ─────────────────────────────────────────────────────
