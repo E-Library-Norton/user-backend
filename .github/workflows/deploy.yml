@@ -1,0 +1,43 @@
+name: Build & Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # 2. Login Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 3. Build & Push Image
+      - name: Build and Push Docker Image
+        run: |
+          docker build --platform=linux/amd64 \
+            -t elibrarynorton/elibrarynorton-api:latest .
+          
+          docker push elibrarynorton/elibrarynorton-api:latest
+
+      # 4. Deploy to Server
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ~/elibrary
+
+            docker compose pull
+            docker compose up -d

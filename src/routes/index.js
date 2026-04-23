@@ -56,30 +56,11 @@ router.use('/push',    pushRoutes);
 router.use('/feedback', feedbackRoutes);
 router.use('/ai/recommendations', aiRecommendationRoutes);
 
-// ── API info ──────────────────────────────────────────────────────────────────
+// ── API info 
 router.get('/', (req, res) => {
   res.json({
     name: 'E-Library API',
     version: '1.0.0',
-    endpoints: {
-      // Auth
-      auth: '/api/auth',
-      // RBAC
-      users: '/api/users',
-      roles: '/api/roles',
-      permissions: '/api/permissions',
-      // Library
-      uploads: '/api/uploads',
-      books: '/api/books',
-      categories: '/api/categories',
-      authors: '/api/authors',
-      publishers: '/api/publishers',
-      materialTypes: '/api/material-types',
-      departments: '/api/departments',
-      downloads: '/api/downloads',
-      activities: '/api/activities',
-      feedback: '/api/feedback',
-    },
   });
 });
 
