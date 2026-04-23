@@ -358,25 +358,26 @@ class AuthController {
 
   // GET /api/auth/verify-email?token=xxx&id=yyy
   static async verifyEmail(req, res, next) {
-    const FRONTEND_URL = process.env.FRONTEND_URL;
+    // Use FRONTEND_USER_URL if set (user-facing frontend), otherwise fall back to FRONTEND_URL
+    const BASE = process.env.FRONTEND_USER_URL || process.env.FRONTEND_URL;
     try {
       const { token, id } = req.query;
       if (!token || !id) {
-        return res.redirect(`${FRONTEND_URL}/dashboard/profile?email_verified=invalid`);
+        return res.redirect(`${BASE}/profile?email_verified=invalid`);
       }
 
       const user = await User.findByPk(id);
       if (!user || !user.emailVerifyToken) {
-        return res.redirect(`${FRONTEND_URL}/dashboard/profile?email_verified=invalid`);
+        return res.redirect(`${BASE}/profile?email_verified=invalid`);
       }
 
       const [storedToken, expiry] = user.emailVerifyToken.split(':');
       if (storedToken !== token || Date.now() > Number(expiry)) {
-        return res.redirect(`${FRONTEND_URL}/dashboard/profile?email_verified=expired`);
+        return res.redirect(`${BASE}/profile?email_verified=expired`);
       }
 
       await user.update({ isEmailVerified: true, emailVerifyToken: null });
-      return res.redirect(`${FRONTEND_URL}/dashboard/profile?email_verified=success`);
+      return res.redirect(`${BASE}/profile`);
     } catch (err) { next(err); }
   }
 }

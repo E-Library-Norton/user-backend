@@ -198,9 +198,9 @@ module.exports = { sendOtpEmail, sendPasswordResetEmail, sendVerificationEmail }
 
 /**
  * Send an email address verification link.
- * @param {string} to          - recipient email
- * @param {string} verifyLink  - full URL e.g. https://api.../api/auth/verify-email?token=xxx
- * @param {string} firstName   - user's first name
+ * @param {string} to          
+ * @param {string} verifyLink  
+ * @param {string} firstName   
  */
 async function sendVerificationEmail(to, verifyLink, firstName = 'Student') {
   const name = firstName || 'Student';
@@ -233,27 +233,25 @@ async function sendVerificationEmail(to, verifyLink, firstName = 'Student') {
           <!-- Body -->
           <tr>
             <td style="padding:40px 40px 32px;text-align:center;">
-              <div style="width:64px;height:64px;background:#EFF6FF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
-                <span style="font-size:32px;">✉️</span>
+              <div style="width:64px;height:64px;background:#EFF6FF;border-radius:50%;display:table;margin:0 auto 20px;text-align:center;vertical-align:middle;">
+                <span style="display:table-cell;vertical-align:middle;font-size:30px;line-height:1;">✉️</span>
               </div>
               <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#1A1A1A;">Verify your email</h1>
               <p style="margin:0 0 28px;font-size:15px;color:#5E5E5E;line-height:1.6;">
                 Hi <strong>${name}</strong>, click the button below to verify your email address and activate full access to your account.
               </p>
               <!-- CTA button -->
-              <a href="${verifyLink}"
-                 style="display:inline-block;background:#20659C;color:#ffffff;font-size:15px;font-weight:700;
-                        text-decoration:none;padding:14px 36px;border-radius:10px;letter-spacing:0.2px;">
-                Verify Email Address
-              </a>
-              <!-- Fallback link -->
-              <p style="font-size:13px;color:#9CA3AF;margin:24px 0 8px;">Or copy and paste this link into your browser:</p>
-              <p style="font-size:12px;color:#20659C;word-break:break-all;margin:0 0 24px;">
-                <a href="${verifyLink}" style="color:#20659C;">${verifyLink}</a>
-              </p>
+              <div style="margin:32px 0 28px;">
+                <a href="${verifyLink}"
+                   style="display:inline-block;background:#20659C;color:#ffffff;font-size:15px;font-weight:700;
+                          text-decoration:none;padding:16px 44px;border-radius:12px;letter-spacing:0.3px;
+                          box-shadow:0 4px 12px rgba(32,101,156,0.35);">
+                  Verify Email Address
+                </a>
+              </div>
               <!-- Expiry notice -->
-              <div style="background:#FFF8EC;border:1px solid #F5D98B;border-radius:8px;padding:12px 16px;margin-bottom:8px;">
-                <p style="margin:0;font-size:13px;color:#92620A;">
+              <div style="background:#FFF8EC;border:1px solid #F5D98B;border-radius:10px;padding:14px 20px;margin-bottom:20px;">
+                <p style="margin:0;font-size:13px;color:#92620A;line-height:1.5;">
                   ⏰ This link expires in <strong>24 hours</strong>.
                 </p>
               </div>
