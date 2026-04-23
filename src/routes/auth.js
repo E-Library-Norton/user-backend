@@ -32,6 +32,10 @@ router.post('/forgot-password', AuthController.forgotPassword);
 router.post('/verify-otp',      AuthController.verifyOtp);
 router.post('/reset-password',  AuthController.resetPassword);
 
+// ── Email verification ────────────────────────────────────────────────────────
+router.post('/send-verification-email', authenticate, AuthController.sendVerificationEmail);
+router.get('/verify-email',                           AuthController.verifyEmail);
+
 // ── Two-Factor Authentication 
 const TwoFactorController = require('../controllers/twoFactorController');
 

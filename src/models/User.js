@@ -64,6 +64,16 @@ const User = sequelize.define(
       defaultValue: true,
       field: "is_active",
     },
+    isEmailVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: "is_email_verified",
+    },
+    emailVerifyToken: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: "email_verify_token",
+    },
     isDeleted: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

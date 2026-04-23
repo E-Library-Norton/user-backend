@@ -194,4 +194,89 @@ async function sendPasswordResetEmail(to, resetLink, firstName = 'Student') {
   });
 }
 
-module.exports = { sendOtpEmail, sendPasswordResetEmail };
+module.exports = { sendOtpEmail, sendPasswordResetEmail, sendVerificationEmail };
+
+/**
+ * Send an email address verification link.
+ * @param {string} to          - recipient email
+ * @param {string} verifyLink  - full URL e.g. https://api.../api/auth/verify-email?token=xxx
+ * @param {string} firstName   - user's first name
+ */
+async function sendVerificationEmail(to, verifyLink, firstName = 'Student') {
+  const name = firstName || 'Student';
+
+  await createTransporter().sendMail({
+    from: `"E-Library NU" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: 'Verify your E-Library NU email address',
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Verify Email</title>
+</head>
+<body style="margin:0;padding:0;background:#F8FAFC;font-family:Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#20659C,#0d3a61);padding:36px 40px;text-align:center;">
+              <span style="color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.3px;">
+                📚 E-Library <span style="color:#DF900A;">NU</span>
+              </span>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 40px 32px;text-align:center;">
+              <div style="width:64px;height:64px;background:#EFF6FF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
+                <span style="font-size:32px;">✉️</span>
+              </div>
+              <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#1A1A1A;">Verify your email</h1>
+              <p style="margin:0 0 28px;font-size:15px;color:#5E5E5E;line-height:1.6;">
+                Hi <strong>${name}</strong>, click the button below to verify your email address and activate full access to your account.
+              </p>
+              <!-- CTA button -->
+              <a href="${verifyLink}"
+                 style="display:inline-block;background:#20659C;color:#ffffff;font-size:15px;font-weight:700;
+                        text-decoration:none;padding:14px 36px;border-radius:10px;letter-spacing:0.2px;">
+                Verify Email Address
+              </a>
+              <!-- Fallback link -->
+              <p style="font-size:13px;color:#9CA3AF;margin:24px 0 8px;">Or copy and paste this link into your browser:</p>
+              <p style="font-size:12px;color:#20659C;word-break:break-all;margin:0 0 24px;">
+                <a href="${verifyLink}" style="color:#20659C;">${verifyLink}</a>
+              </p>
+              <!-- Expiry notice -->
+              <div style="background:#FFF8EC;border:1px solid #F5D98B;border-radius:8px;padding:12px 16px;margin-bottom:8px;">
+                <p style="margin:0;font-size:13px;color:#92620A;">
+                  ⏰ This link expires in <strong>24 hours</strong>.
+                </p>
+              </div>
+              <p style="font-size:13px;color:#9CA3AF;margin:16px 0 0;">
+                If you did not create this account, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background:#F8FAFC;padding:20px 40px;border-top:1px solid #E2E8F0;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#9CA3AF;">
+                © ${new Date().getFullYear()} Norton University E-Library · Phnom Penh, Cambodia
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+    text: `Hi ${name},\n\nVerify your E-Library NU email by visiting:\n${verifyLink}\n\nThis link expires in 24 hours.\n\nIf you did not create this account, ignore this email.`,
+  });
+}

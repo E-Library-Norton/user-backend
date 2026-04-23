@@ -5,7 +5,7 @@ const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, AuthenticationError, NotFoundError } = require('../utils/errors');
 const { logActivity }   = require('../utils/activityLogger');
 const { uploadToR2, extractKeyFromUrl } = require('../utils/cloudR2Upload');
-const { sendOtpEmail } = require('../utils/emailService');
+const { sendOtpEmail, sendVerificationEmail } = require('../utils/emailService');
 const r2 = require('../config/r2');
 const { GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
@@ -148,7 +148,8 @@ class AuthController {
         id: user.id, avatar: user.avatar, username: user.username,
         email: user.email, studentId: user.studentId,
         firstName: user.firstName, lastName: user.lastName,
-        roles: user.Roles.map(r => r.name), twoFactorEnabled: user.twoFactorEnabled, createdAt: user.createdAt,
+        roles: user.Roles.map(r => r.name), twoFactorEnabled: user.twoFactorEnabled,
+        isEmailVerified: user.isEmailVerified, createdAt: user.createdAt,
       });
     } catch (err) { next(err); }
   }
@@ -331,6 +332,51 @@ class AuthController {
       await user.update({ password });
 
       return ResponseFormatter.success(res, null, 'Password reset successfully. You can now sign in.');
+    } catch (err) { next(err); }
+  }
+
+  // POST /api/auth/send-verification-email
+  static async sendVerificationEmail(req, res, next) {
+    try {
+      const user = await User.findByPk(req.user.id);
+      if (!user) throw new NotFoundError('User not found');
+      if (user.isEmailVerified) {
+        return ResponseFormatter.success(res, null, 'Email is already verified');
+      }
+
+      const token = require('crypto').randomBytes(32).toString('hex');
+      const expiry = Date.now() + 24 * 60 * 60 * 1000; // 24 h
+      // Store token+expiry encoded in the column
+      await user.update({ emailVerifyToken: `${token}:${expiry}` });
+
+      const verifyLink = `${process.env.BACKEND_URL}/api/auth/verify-email?token=${token}&id=${user.id}`;
+      await sendVerificationEmail(user.email, verifyLink, user.firstName);
+
+      return ResponseFormatter.success(res, null, 'Verification email sent. Please check your inbox.');
+    } catch (err) { next(err); }
+  }
+
+  // GET /api/auth/verify-email?token=xxx&id=yyy
+  static async verifyEmail(req, res, next) {
+    const FRONTEND_URL = process.env.FRONTEND_URL;
+    try {
+      const { token, id } = req.query;
+      if (!token || !id) {
+        return res.redirect(`${FRONTEND_URL}/dashboard/profile?email_verified=invalid`);
+      }
+
+      const user = await User.findByPk(id);
+      if (!user || !user.emailVerifyToken) {
+        return res.redirect(`${FRONTEND_URL}/dashboard/profile?email_verified=invalid`);
+      }
+
+      const [storedToken, expiry] = user.emailVerifyToken.split(':');
+      if (storedToken !== token || Date.now() > Number(expiry)) {
+        return res.redirect(`${FRONTEND_URL}/dashboard/profile?email_verified=expired`);
+      }
+
+      await user.update({ isEmailVerified: true, emailVerifyToken: null });
+      return res.redirect(`${FRONTEND_URL}/dashboard/profile?email_verified=success`);
     } catch (err) { next(err); }
   }
 }
