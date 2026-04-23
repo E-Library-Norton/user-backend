@@ -88,6 +88,8 @@ if (isReal(process.env.FACEBOOK_APP_ID) && isReal(process.env.FACEBOOK_APP_SECRE
       callbackURL:   `${BACKEND_URL}/api/auth/facebook/callback`,
       profileFields: ['id', 'emails', 'name', 'photos'],
       enableProof:   true,
+      // email scope is required to receive profile.emails from Facebook
+      scope:         ['public_profile', 'email'],
     },
     async (_accessToken, _refreshToken, profile, done) => {
       try {
@@ -95,9 +97,13 @@ if (isReal(process.env.FACEBOOK_APP_ID) && isReal(process.env.FACEBOOK_APP_SECRE
         const firstName = profile.name?.givenName  ?? null;
         const lastName  = profile.name?.familyName ?? null;
         const avatar    = profile.photos?.[0]?.value ?? null;
+        console.log(`[OAuth:facebook] profile id=${profile.id} email=${email} firstName=${firstName}`);
         const user = await findOrCreateOAuthUser({ provider: 'facebook', oauthId: profile.id, email, firstName, lastName, avatar });
         done(null, user);
-      } catch (err) { done(err, null); }
+      } catch (err) {
+        console.error('[OAuth:facebook] strategy error:', err);
+        done(err, null);
+      }
     }
   ));
 }

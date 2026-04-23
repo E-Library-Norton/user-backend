@@ -49,12 +49,14 @@ function oauthCallback(provider) {
   return (req, res, next) => {
     passport.authenticate(provider, { session: false }, (err, user) => {
       if (err) {
-        console.error(`[OAuth:${provider}] error:`, err.message || err);
-        return res.redirect(`${FRONTEND_URL}/auth/signin?error=oauth_failed`);
+        console.error(`[OAuth:${provider}] error:`, err?.message || err);
+        console.error(`[OAuth:${provider}] stack:`, err?.stack);
+        const reason = encodeURIComponent(err?.message || 'unknown');
+        return res.redirect(`${FRONTEND_URL}/auth/signin?error=oauth_failed&reason=${reason}`);
       }
       if (!user) {
-        console.error(`[OAuth:${provider}] no user returned`);
-        return res.redirect(`${FRONTEND_URL}/auth/signin?error=oauth_failed`);
+        console.error(`[OAuth:${provider}] no user returned — possibly strategy not registered or missing credentials`);
+        return res.redirect(`${FRONTEND_URL}/auth/signin?error=oauth_failed&reason=no_user`);
       }
       const roles = (user.Roles || []).map(r => r.name);
       const accessToken = jwt.sign(
@@ -80,7 +82,7 @@ router.get('/google/callback', oauthCallback('google'));
 
 // ── Facebook 
 router.get('/facebook',
-  passport.authenticate('facebook', { scope: ['public_profile'], session: false }));
+  passport.authenticate('facebook', { scope: ['public_profile', 'email'], session: false }));
 router.get('/facebook/callback', oauthCallback('facebook'));
 
 // ── GitHub 
