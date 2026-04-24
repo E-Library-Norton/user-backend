@@ -1,12 +1,12 @@
 # ✅ Norton E-Library — Task Tracker
 
-> **Version:** 1.2  
-> **Updated:** April 19, 2026  
+> **Version:** 1.3  
+> **Updated:** April 24, 2026  
 > **Based on:** [PRD.md](PRD.md) · [PLAN.md](PLAN.md)  
 > **Project:** Norton E-Library  
 > **Team:** Samnang · Phearun · Dara · Sorphiny
 
-> 🟢 **Last sync:** April 19, 2026 — Phase 8 Two-Factor Authentication complete: TOTP setup + QR code, OTP login verification, 8× recovery codes (SHA-256 hashed, single-use), Settings page with TwoFactorCard, login page recovery code fallback, sonner toast notifications · 234/237 tasks (99%)
+> 🟢 **Last sync:** April 24, 2026 — Documentation + architecture sync complete: PRD/PLAN/DIAGRAM updated to match production schema and routes, including public testimonials endpoint (`GET /api/reviews/public`) and expanded ERD (`reviews`, `feedbacks`, `push_subscriptions`) · 234/237 tasks (99%)
 
 ---
 

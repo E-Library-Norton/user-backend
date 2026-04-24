@@ -1,7 +1,7 @@
 # 📚 Norton E-Library — Product Requirements Document (PRD)
 
-> **Version:** 1.3  
-> **Last Updated:** April 19, 2026  
+> **Version:** 1.4  
+> **Last Updated:** April 24, 2026  
 > **Author:** Norton University Development Team  
 > **Project:** Norton E-Library  
 > **Status:** Live in Production (v1.0)
@@ -61,254 +61,110 @@ Norton University students need a modern, digital-first library system that:
 ---
 
 ## 3. Goals & Objectives
+### Entity-Relationship Overview
 
-### Primary Goals
-- Provide every Norton University student with free, instant access to a world-class digital library
-- Become Southeast Asia's leading university digital library platform
+- **Identity & Access:** `users`, `roles`, `permissions`, `users_roles`, `roles_permissions`, `users_permissions`
+- **Library Core:** `books`, `authors`, `editors`, `publishers`, `categories`, `departments`, `material_types`
+- **Library Junctions:** `books_authors`, `books_editors`, `publishers_books`
+- **User Activity:** `downloads`, `activities`, `reviews`, `feedbacks`, `push_subscriptions`
+- **System Config:** `settings`
 
-### Key Objectives
-- **Accessibility:** 24/7 online access from any device
-- **Discoverability:** AI-powered recommendations and full-text search
-- **Management:** Comprehensive admin dashboard for library staff
-- **Scalability:** Cloud-native architecture that scales with the university
-- **Security:** Role-based access control (RBAC) with granular permissions
-- **Bilingual:** Full English/Khmer (ភាសាខ្មែរ) support for titles and metadata
+### 8.1 Users
 
----
-
-## 4. Target Users & Personas
-
-### 4.1 Students (Primary Users)
-- Enrolled Norton University students
-- Login via email, username, or student ID
-- Browse, search, read, and download academic books
-- Manage favorites, reading history, and reading progress
-- Receive AI-powered book recommendations
-
-### 4.2 Librarians
-- Library staff who manage the book catalog
-- Upload books (PDF + cover images)
-- Manage categories, authors, editors, publishers, departments, and material types
-- View download statistics and activity logs
-
-### 4.3 Administrators (Super Users)
-- Full system access
-- All librarian capabilities plus:
-- User management (create, update, deactivate, soft-delete)
-- Role and permission management
-- System settings configuration
-- View comprehensive analytics and dashboards
-
-### Roles Defined in System
-| Role | Permissions |
-|---|---|
-| `user` | Browse, search, read, download books; manage own profile |
-| `librarian` | All user permissions + create/update books and metadata |
-| `admin` | All permissions + user management, roles, permissions, settings, delete books |
-
----
-
-## 5. System Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         VERCEL (Frontend Hosting)                    │
-│                                                                      │
-│  ┌─────────────────────┐        ┌─────────────────────────────────┐  │
-│  │  Student Frontend    │        │  Admin Dashboard                │  │
-│  │  Next.js 16 + React │        │  Next.js 16 + React 19         │  │
-│  │  Tailwind CSS        │        │  shadcn/ui + Tailwind CSS      │  │
-│  │  Redux Toolkit       │        │  Redux Toolkit (RTK Query)     │  │
-│  │  Port: 3000          │        │  Port: 3001                    │  │
-│  └────────┬─────────────┘        └──────────┬─────────────────────┘  │
-│           │                                  │                        │
-│           │      API Requests (HTTPS)        │                        │
-└───────────┼──────────────────────────────────┼────────────────────────┘
-            │                                  │
-            ▼                                  ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                         RENDER (Backend Hosting)                     │
-│                                                                      │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │  Node.js + Express.js REST API                                 │  │
-│  │  ─────────────────────────────────────────────                 │  │
-│  │  • JWT Authentication (Access + Refresh tokens)                │  │
-│  │  • RBAC Middleware (Roles + Permissions)                       │  │
-│  │  • Sequelize ORM                                               │  │
-│  │  • Rate Limiting (express-rate-limit)                          │  │
-│  │  • Helmet Security Headers                                     │  │
-│  │  • CORS Whitelisting                                           │  │
-│  └────────┬─────────────┬────────────────┬───────────────────────┘  │
-│           │             │                │                           │
-│           ▼             ▼                ▼                           │
-│  ┌─────────────┐ ┌──────────────┐ ┌───────────────────┐            │
-│  │ PostgreSQL   │ │ Cloudflare   │ │ Google Gemini AI  │            │
-│  │ (Render DB)  │ │ R2 Storage   │ │ (Recommendations) │            │
-│  └─────────────┘ └──────────────┘ └───────────────────┘            │
-│                                                                      │
-│  ┌───────────────────┐  ┌──────────────────┐                        │
-│  │ Vector Search Svc  │  │ Gmail SMTP       │                        │
-│  │ (Book Cover AI)    │  │ (Email / OTP)    │                        │
-│  └───────────────────┘  └──────────────────┘                        │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 6. Tech Stack
-
-### 6.1 Backend API (`user-backend/`)
-
-| Layer | Technology | Version |
+| Column | Type | Notes |
 |---|---|---|
-| **Runtime** | Node.js | Latest LTS |
-| **Framework** | Express.js | ^4.x |
-| **ORM** | Sequelize | ^6.37.7 |
-| **Database** | PostgreSQL | Hosted on Render |
-| **Authentication** | JSON Web Tokens (jsonwebtoken) | ^9.0.3 |
-| **Password Hashing** | bcryptjs | ^3.0.3 |
-| **File Upload** | Multer (memory storage) | ^2.0.2 |
-| **Object Storage** | Cloudflare R2 (S3-compatible, via @aws-sdk/client-s3) | ^3.1015.0 |
-| **Email** | Nodemailer (Gmail SMTP) | ^8.0.1 |
-| **AI** | Google Gemini 2.0 Flash API | REST API |
-| **Security** | Helmet, CORS, express-rate-limit | Latest |
-| **Logging** | Morgan (HTTP logging) | ^1.10.1 |
-| **Validation** | express-validator | ^7.3.1 |
-| **Realtime** | Socket.IO | ^4.8.3 |
+| `id` | BIGINT | PK, auto-increment |
+| `username` | VARCHAR(50) | Unique |
+| `email` | VARCHAR(256) | Unique |
+| `password` | VARCHAR(256) | Nullable for OAuth-only users |
+| `student_id` | VARCHAR(50) | Unique, nullable |
+| `avatar` | VARCHAR(500) | Nullable |
+| `oauth_provider`, `oauth_id` | VARCHAR | OAuth identity |
+| `is_active`, `is_deleted` | BOOLEAN | Soft-delete enabled |
+| `is_email_verified` | BOOLEAN | Email verification status |
+| `two_factor_enabled`, `two_factor_secret` | BOOLEAN / VARCHAR | 2FA support |
+| `created_at`, `updated_at` | TIMESTAMP | Auditing |
 
-### 6.2 Admin Dashboard (`elibrary-dashboard/`)
+### 8.2 Books
 
-| Layer | Technology | Version |
+| Column | Type | Notes |
 |---|---|---|
-| **Framework** | Next.js | ^16.2.1 |
-| **UI Library** | React | ^19.2.0 |
-| **Component Library** | shadcn/ui (Radix UI primitives) | Full suite |
-| **Styling** | Tailwind CSS | ^4.0.0 |
-| **State Management** | Redux Toolkit + RTK Query | ^2.11.2 |
-| **Data Tables** | TanStack React Table | ^8.21.2 |
-| **Forms** | React Hook Form + Zod validation | ^7.54.1 / ^4.1.8 |
-| **Charts** | Recharts | ^2.15.1 |
-| **PDF Viewer** | @react-pdf-viewer | ^3.12.0 |
-| **DnD** | @dnd-kit | ^6.3.1 |
-| **Animations** | Motion (Framer Motion) | ^11.17.0 |
-| **Command Palette** | kbar | ^0.1.0-beta.45 |
-| **Monitoring** | Sentry (@sentry/nextjs) | ^9.19.0 |
-| **Theme** | next-themes | ^0.4.6 |
-| **TypeScript** | TypeScript | 5.7.2 |
+| `id` | BIGINT | PK |
+| `title`, `title_kh` | VARCHAR(500) | EN/KH title |
+| `isbn` | VARCHAR(20) | Unique, nullable |
+| `publication_year`, `pages` | INTEGER | Metadata |
+| `description` | TEXT | Nullable |
+| `cover_url`, `pdf_url` | VARCHAR(500) | Primary media URLs |
+| `pdf_urls` | JSONB | Additional PDF variants |
+| `views`, `downloads` | INTEGER | Counters |
+| `language` | VARCHAR(10) | ISO language code |
+| `publisher_id`, `category_id`, `department_id`, `type_id` | INTEGER | Foreign keys |
+| `is_active`, `is_deleted` | BOOLEAN | Active + soft-delete flags |
 
-### 6.3 Student Frontend (`frontend/`)
+### 8.3 Reviews
 
-| Layer | Technology | Version |
+| Column | Type | Notes |
 |---|---|---|
-| **Framework** | Next.js | 16.2.1 |
-| **UI Library** | React | 19.2.4 |
-| **Component Library** | shadcn/ui (Radix UI) | Latest |
-| **Styling** | Tailwind CSS | ^4 |
-| **State Management** | Redux Toolkit + RTK Query | ^2.11.2 |
-| **PDF Viewer** | @react-pdf-viewer + pdfjs-dist | ^3.12.0 / ^3.4.120 |
-| **Animations** | Framer Motion | ^12.38.0 |
-| **Theme** | next-themes | ^0.4.6 |
-| **TypeScript** | TypeScript | ^5 |
+| `id` | BIGINT | PK |
+| `book_id` | BIGINT | FK → `books.id` |
+| `user_id` | BIGINT | FK → `users.id` |
+| `rating` | INTEGER | 1–5 |
+| `comment` | TEXT | Nullable |
+| `is_deleted` | BOOLEAN | Soft delete |
+| `created_at`, `updated_at` | TIMESTAMP | Auditing |
 
----
+**Constraint:** one active review per `book_id + user_id` (partial unique index where `is_deleted=false`).
 
-## 7. Application Structure
+### 8.4 Feedbacks
 
-### 7.1 Backend (`user-backend/src/`)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | BIGINT | PK |
+| `user_id` | BIGINT | Nullable FK (anonymous allowed) |
+| `type` | ENUM | `general`, `bug`, `feature`, `content`, `account` |
+| `subject` | VARCHAR(255) | Required |
+| `message` | TEXT | Required |
+| `rating` | INTEGER | Optional 1–5 |
+| `status` | ENUM | `new`, `reviewed`, `in_progress`, `resolved`, `closed` |
+| `resolved_by`, `resolved_at` | BIGINT / TIMESTAMP | Admin resolution tracking |
 
-```
-src/
-├── index.js                    # Express app entry point, CORS, middleware, DB connect
-├── config/
-│   ├── constants.js            # File size limits, pagination defaults, HTTP status codes
-│   ├── database.js             # Sequelize + PostgreSQL connection (SSL for Render)
-│   └── r2.js                   # Cloudflare R2 S3Client configuration
-├── controllers/
-│   ├── activityController.js   # Activity log CRUD
-│   ├── aiRecommendationController.js  # AI-powered book recommendations (Gemini)
-│   ├── authController.js       # Register, login, refresh, profile, OTP, password reset
-│   ├── authorController.js     # Author CRUD
-│   ├── bookController.js       # Book CRUD + scan-search (vector)
-│   ├── categoryController.js   # Category CRUD
-│   ├── departmentController.js # Department CRUD
-│   ├── downloadController.js   # PDF streaming, download recording, cover serving
-│   ├── editorController.js     # Editor CRUD
-│   ├── materialTypeController.js  # Material type CRUD
-│   ├── permissionController.js # Permission management
-│   ├── publisherController.js  # Publisher CRUD
-│   ├── roleController.js       # Role management
-│   ├── settingController.js    # Application settings (key-value store)
-│   ├── statsController.js      # Dashboard analytics & statistics
-│   ├── uploadController.js     # File upload to Cloudflare R2
-│   └── userController.js       # User CRUD + role assignment
-├── middleware/
-│   ├── auth.js                 # authenticate, authorize, requirePermission, optionalAuth
-│   ├── errorHandler.js         # Global error handling middleware
-│   ├── rateLimiter.js          # Rate limiting configuration
-│   ├── upload.js               # Multer configuration for file uploads
-│   └── validation.js           # express-validator rules
-├── models/                     # Sequelize model definitions (14 models)
-├── routes/                     # Express router definitions (18 route files)
-└── utils/
-    ├── activityLogger.js       # Activity logging helper
-    ├── cloudinaryUpload.js     # R2 upload utilities (named "cloudinary" for legacy reasons)
-    ├── emailService.js         # Nodemailer email templates (OTP, password reset)
-    ├── errors.js               # Custom error classes
-    ├── helpers.js              # Utility functions (file size formatting, etc.)
-    ├── logger.js               # Application logger
-    ├── responseFormatter.js    # Standardized API response format
-    └── vectorSearchService.js  # External vector search API integration
-```
+### 8.5 Push Subscriptions
 
-### 7.2 Admin Dashboard (`elibrary-dashboard/src/`)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | BIGINT | PK |
+| `user_id` | BIGINT | Nullable FK |
+| `endpoint` | TEXT | Unique |
+| `keys` | JSON | Web Push keys (`p256dh`, `auth`) |
 
-```
-src/
-├── app/
-│   ├── (auth)/                 # Login/register pages (auth layout)
-│   ├── dashboard/
-│   │   ├── overview/           # Analytics dashboard (charts, stats, recent activity)
-│   │   ├── books/              # Book management (CRUD, categories, departments, etc.)
-│   │   ├── users/              # User management (CRUD, roles, permissions)
-│   │   ├── authors/            # Author management
-│   │   ├── categories/         # Category management
-│   │   ├── departments/        # Department management
-│   │   ├── material-types/     # Material type management
-│   │   ├── publishers/         # Publisher management
-│   │   ├── profile/            # Admin/librarian profile
-│   │   └── billing/            # Billing information
-│   └── api/                    # Next.js API routes (auth proxy)
-├── components/                 # Reusable UI components (shadcn/ui based)
-│   ├── crud/                   # Generic CRUD components
-│   ├── forms/                  # Form components
-│   ├── kbar/                   # Command palette
-│   ├── layout/                 # App shell, sidebar, header
-│   ├── modal/                  # Modal/dialog components
-│   ├── pdf-reader/             # PDF viewer component
-│   └── ui/                     # shadcn/ui primitives
-├── features/                   # Feature-specific components
-│   ├── auth/                   # Authentication views
-│   ├── books/                  # Book management views
-│   ├── overview/               # Dashboard overview
-│   └── profile/                # Profile management
-├── services/                   # RTK Query API slices
-│   ├── api.ts                  # Base API with auth re-auth logic
-│   ├── authApi.ts              # Authentication endpoints
-│   ├── bookApi.ts              # Book CRUD endpoints
-│   ├── categoryApi.ts          # Category endpoints
-│   ├── userApi.ts              # User management endpoints
-│   └── ...                     # Author, editor, publisher, etc.
-├── store/                      # Redux store + slices
-├── hooks/                      # Custom React hooks
-├── config/                     # Navigation config, data table config
-├── types/                      # TypeScript type definitions
-└── lib/                        # Utilities (cn, formatters, etc.)
-```
+### 8.6 Roles, Permissions, and Junctions
 
-### 7.3 Student Frontend (`frontend/`)
+- `roles`: predefined (`admin`, `librarian`, `user`)
+- `permissions`: granular capabilities (view/create/update/delete/assign)
+- Junction tables:
+  - `users_roles`
+  - `roles_permissions`
+  - `users_permissions`
 
-```
-app/
+### 8.7 Catalog Metadata Tables
+
+- `authors`
+- `editors`
+- `publishers`
+- `categories`
+- `departments`
+- `material_types`
+
+Book relation junctions:
+- `books_authors` (includes `is_primary_author`)
+- `books_editors`
+- `publishers_books`
+
+### 8.8 Operational Tables
+
+- `downloads` — authenticated download history + IP capture
+- `activities` — audit logs for CRUD/admin actions
+- `settings` — key-value configuration store (`string`, `json`, `boolean`, `number`)
 ├── page.tsx                    # Home page (Hero, Featured Books, Stats, CTA)
 ├── about/page.tsx              # About Norton E-Library (mission, team, milestones)
 ├── contact/page.tsx            # Contact page (form, FAQs, contact info)
@@ -384,6 +240,44 @@ app/
 | `is_active` | BOOLEAN | Default: true |
 | `is_deleted` | BOOLEAN | Default: false (soft delete) |
 | `created_at` | TIMESTAMP | Auto |
+
+### 8.13 Reviews
+
+| Column | Type |
+|---|---|
+| `id` | BIGINT (PK) |
+| `book_id` | BIGINT, FK → Books |
+| `user_id` | BIGINT, FK → Users |
+| `rating` | INTEGER, 1–5 |
+| `comment` | TEXT, Nullable |
+| `is_deleted` | BOOLEAN, Default: false |
+| `created_at` | TIMESTAMP |
+| `updated_at` | TIMESTAMP |
+
+### 8.14 Feedbacks
+
+| Column | Type |
+|---|---|
+| `id` | BIGINT (PK) |
+| `user_id` | BIGINT, FK → Users, Nullable |
+| `type` | ENUM (`general`,`bug`,`feature`,`content`,`account`) |
+| `subject` | VARCHAR(255) |
+| `message` | TEXT |
+| `rating` | INTEGER, Nullable (1–5) |
+| `status` | ENUM (`new`,`reviewed`,`in_progress`,`resolved`,`closed`) |
+| `resolved_by` | BIGINT, FK → Users, Nullable |
+| `resolved_at` | TIMESTAMP, Nullable |
+
+### 8.15 Push Subscriptions
+
+| Column | Type |
+|---|---|
+| `id` | BIGINT (PK) |
+| `user_id` | BIGINT, FK → Users, Nullable |
+| `endpoint` | TEXT, Unique |
+| `keys` | JSON (`p256dh`, `auth`) |
+| `created_at` | TIMESTAMP |
+| `updated_at` | TIMESTAMP |
 | `updated_at` | TIMESTAMP | Auto |
 
 **Behaviors:**
@@ -673,7 +567,7 @@ Each of these follows standard REST CRUD pattern:
 - Recent activities (filterable by days)
 - Role-based activity stats (create/update/delete counts per role)
 
-### 9.9 AI Recommendations (`/api/ai`)
+### 9.9 AI Recommendations (`/api/ai/recommendations`)
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
@@ -693,6 +587,26 @@ Each of these follows standard REST CRUD pattern:
 |---|---|---|
 | Activities | `/api/activities` | Admin/Librarian |
 | Settings | `/api/settings` | Admin |
+
+### 9.11 Reviews (`/api/reviews` + nested under `/api/books/:bookId/reviews`)
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/reviews/public` | Public | Homepage testimonials feed (rating >= 4) |
+| GET | `/reviews/my` | Bearer | Current user's own reviews |
+| GET | `/reviews/stats` | Admin/Librarian | Aggregated rating stats |
+| GET | `/reviews` | Admin/Librarian | List all reviews with filters/search |
+| PUT | `/reviews/:id` | Bearer | Update own review (or admin/librarian) |
+| DELETE | `/reviews/:id` | Bearer | Soft-delete own review (or admin/librarian) |
+| GET | `/books/:bookId/reviews` | Public | List reviews for one book |
+| POST | `/books/:bookId/reviews` | Bearer | Create review (one active review/user/book) |
+
+### 9.12 Push & Feedback
+
+| Resource | Base Path | Auth |
+|---|---|---|
+| Push Notifications | `/api/push` | Mixed (`/vapid-public-key` public, subscribe/unsubscribe optional auth) |
+| Feedback | `/api/feedback` | Mixed (public create + admin moderation endpoints) |
 
 ---
 
@@ -868,6 +782,13 @@ Each of these follows standard REST CRUD pattern:
 - Render free-tier databases may sleep after inactivity
 - Automatic retry logic: 5 attempts with 3-second delays
 - Graceful exit after all retries exhausted
+
+### 12.8 Reviews, Testimonials & Feedback
+- **Review Module** — Full review lifecycle (create/update/delete/get by book/my reviews/admin list)
+- **Public Testimonials Feed** — `GET /api/reviews/public` for homepage carousel (high-rated recent reviews)
+- **Review Analytics** — `GET /api/reviews/stats` for rating distribution + average rating
+- **Feedback Intake** — Public/auth feedback submission + admin moderation workflow
+- **Real-time Events** — review create/update/delete emits socket events for dashboard/live UI
 
 ---
 

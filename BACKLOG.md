@@ -1,6 +1,6 @@
 # 📋 Feature Request Backlog — Norton E-Library
 
-> **Last updated:** 2026-04-19 (Sprint 16)
+> **Last updated:** 2026-04-24 (Sprint 16)
 > **Source:** Student feedback (contact form), admin observations, stakeholder meetings
 > **Prioritization:** MoSCoW (Must / Should / Could / Won't) × Impact–Effort matrix
 
@@ -95,6 +95,7 @@
 
 | Date | Change |
 |------|--------|
+| 2026-04-24 | Documentation refresh: PRD/PLAN/DIAGRAM synchronized with live backend routes and ERD; added public testimonials endpoint note (`GET /api/reviews/public`). |
 | 2026-04-19 | Postman collection shipped (`E-Library-API.postman_collection.json`, 80+ requests). `aiRecommendations` route mount bug fixed. Token security reviewed (deferred). Task 5.1.7 ✅. |
 | 2026-04-18 | Updated F-001, F-002, F-003 to Done — shipped in v1.0 (personal library + push notifications). DB migrated to new Render instance (`nu_elibrary_db_nvwp`). |
 | 2026-04-07 | Feedback system shipped (B.15 ✅), A/B test hero CTA live (B.19 ✅), backlog reprioritized after first 2 weeks of real student usage. |

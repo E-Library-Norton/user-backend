@@ -1,9 +1,9 @@
 # 📋 Norton E-Library — Project Plan
 
-> **Version:** 1.1  
+> **Version:** 1.2  
 > **Created:** April 1, 2026  
-> **Last Updated:** April 18, 2026  
-> **Based on:** [PRD.md](PRD.md) v1.2  
+> **Last Updated:** April 24, 2026  
+> **Based on:** [PRD.md](PRD.md) v1.4  
 > **Project:** Norton E-Library  
 > **Team Lead:** Chan Samnang
 
@@ -545,7 +545,7 @@ Phase 7 ░░░░░░░░░░░░░░░█ Post-Launch & Iteration
 
 | # | Feature | Priority | Complexity |
 |---|---|---|---|
-| 7.3.1 | Book review & rating system (1–5 stars + comments) | 🟠 High | Medium |
+| 7.3.1 | Public testimonials quality controls (review moderation + content policy) | 🟠 High | Low |
 | 7.3.2 | Advanced search with filters (year range, author, language) | 🟠 High | Medium |
 | 7.3.3 | Push notifications (new books, recommendations) | 🟡 Medium | High |
 | 7.3.4 | Reading goals & achievements (gamification) | 🟡 Medium | Medium |
@@ -559,6 +559,8 @@ Phase 7 ░░░░░░░░░░░░░░░█ Post-Launch & Iteration
 | 7.3.12 | Book request system (students can request new books) | 🟡 Medium | Low |
 | 7.3.13 | Analytics export (PDF/Excel reports for admin) | 🟡 Medium | Medium |
 | 7.3.14 | Real-time collaborative study notes | 🟢 Low | High |
+
+> ✅ **April 24** — Documentation sync completed: PRD/PLAN/DIAGRAM aligned with production routes and schema, including `GET /api/reviews/public` homepage testimonials endpoint and expanded ERD coverage for `reviews`, `feedbacks`, and `push_subscriptions`.
 
 ---
 
