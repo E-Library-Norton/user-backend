@@ -3,6 +3,9 @@ const router           = require('express').Router();
 const ReviewController = require('../controllers/reviewController');
 const { authenticate, authorize } = require('../middleware/auth');
 
+// ── Public: homepage testimonials (no auth) ──────────────────────────────────
+router.get('/public', ReviewController.getPublic);
+
 // ── Admin — list all reviews with filters ────────────────────────────────────
 // GET /api/reviews?page=1&limit=20&bookId=&userId=&rating=
 router.get('/', authenticate, authorize('admin', 'librarian'), ReviewController.getAll);

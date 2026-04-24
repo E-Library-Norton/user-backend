@@ -402,6 +402,35 @@ class ReviewController {
       next(error);
     }
   }
+
+  // ── Public: no-auth endpoint for homepage testimonials ────────────────────
+  static async getPublic(req, res, next) {
+    try {
+      const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+
+      const rows = await Review.findAll({
+        where: { isDeleted: false, rating: { [Op.gte]: 4 } },
+        include: [
+          {
+            model: User,
+            as: 'User',
+            attributes: ['id', 'firstName', 'lastName', 'username', 'avatar'],
+          },
+          {
+            model: Book,
+            as: 'Book',
+            attributes: ['id', 'title'],
+          },
+        ],
+        order: [['created_at', 'DESC']],
+        limit,
+      });
+
+      return ResponseFormatter.success(res, rows);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = ReviewController;
