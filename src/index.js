@@ -10,6 +10,7 @@ const compression = require("compression");
 const { sequelize } = require("./config/database");
 const { initSocket } = require('./utils/socket');
 const { passport } = require('./config/passport');
+const { startScheduler } = require('./utils/scheduler');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -95,6 +96,7 @@ async function connectWithRetry(retries = 5, delayMs = 3000) {
       await sequelize.authenticate();
       console.log("Database connected successfully!");
       httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+      startScheduler();
       return;
     } catch (err) {
       console.warn(`DB connection attempt ${attempt}/${retries} failed: ${err.message}`);

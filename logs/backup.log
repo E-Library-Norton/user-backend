@@ -1,0 +1,12 @@
+[2026-04-25T07:21:26.603Z] ⏰  Scheduled backup starting…
+[2026-04-25T07:21:26.607Z] ❌  DATABASE_URL is not set — skipping backup.
+[2026-04-25T07:23:02.322Z] ⏰  Scheduled backup starting…
+[2026-04-25T07:23:02.325Z] ❌  DATABASE_URL is not set — skipping backup.
+[2026-04-25T07:24:32.011Z] ⏰  Scheduled backup starting…
+[2026-04-25T07:24:38.947Z] [backup] [0;36m[2026-04-25 14:24:32][0m [0;32mStarting PostgreSQL backup...[0m
+[2026-04-25T07:24:38.948Z] [backup] [0;36m[2026-04-25 14:24:32][0m Mode: [1;33murl[0m  |  Retention: 7 days
+[2026-04-25T07:24:38.948Z] [backup] [0;36m[2026-04-25 14:24:32][0m URL: [1;33mpostgresql://nu_elibrary_db_nvwp_user:zzLVgQV0KU6OXiZ0znDaEmRFnDo90eki@...[0m
+[2026-04-25T07:24:38.948Z] [backup] [0;36m[2026-04-25 14:24:38][0m [0;32m✓ Backup created: /Users/david/Documents/Norton-University/E-Library-NU/user-backend/backups/elibrary_2026-04-25_142432.sql.gz (56 KB)[0m
+[2026-04-25T07:24:38.948Z] [backup] [0;36m[2026-04-25 14:24:38][0m [0;32m✓ Backup complete. 3 backup(s) stored, total size: 172K[0m
+[2026-04-25T07:24:38.948Z] [backup] [0;36m[2026-04-25 14:24:38][0m ─────────────────────────────────────────────────────
+[2026-04-25T07:24:38.948Z] ✅  Backup completed successfully.
