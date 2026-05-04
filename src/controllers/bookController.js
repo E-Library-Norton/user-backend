@@ -1,6 +1,10 @@
 // controllers/book.controller.js
 const { Op, literal } = require('sequelize');
-const { sequelize, Book, Author, Editor, Category, Publisher, MaterialType, Department, Download, Review, User } = require('../models');
+const { 
+  sequelize, Book, Author, Editor, Category, Publisher, 
+  MaterialType, Department, Download, Review, User,
+  BookAuthor, BookEditor, PublishersBooks
+} = require('../models');
 const ResponseFormatter = require('../utils/responseFormatter');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 const { logActivity } = require('../utils/activityLogger');
@@ -8,6 +12,12 @@ const { uploadToR2 } = require('../utils/cloudR2Upload');
 const { scanBookCover, syncBookCover, deleteBookCover } = require('../utils/vectorSearchService');
 const { EVENTS, emitToAdmin, emitBroadcast } = require('../utils/socket');
 const { broadcastNotification } = require('../utils/pushNotification');
+const asyncHandler = require('../middleware/asyncHandler');
+const Cache = require('../utils/cache');
+
+// ── Caches ──────────────────────────────────────────────────────────────────
+const bookCache = new Cache(30000); // 30s cache for listings
+const bookDetailCache = new Cache(60000); // 60s cache for details
 
 // ── Shared include for full book detail ───────────────────────────────────────
 const BOOK_INCLUDE = [
@@ -47,583 +57,578 @@ const RATING_ATTRIBUTES = [
 class BookController {
 
   // ── GET /api/books  (Two-query: COUNT + paginated findAll — no GROUP BY issues)
-  static async getAll(req, res, next) {
-    try {
-      const {
-        page = 1, limit = 10,
-        search, categoryId, publisherId, departmentId, typeId,
-        publicationYear, yearFrom, yearTo, language, authorId,
-        isActive, sortBy = 'created_at', sortOrder = 'DESC',
-      } = req.query;
+  static getAll = asyncHandler(async (req, res) => {
+    const cacheKey = `list_${JSON.stringify(req.query)}`;
+    const cached = bookCache.get(cacheKey);
+    if (cached) return ResponseFormatter.success(res, cached, 'Books retrieved (cached)');
 
-      const pageNum  = Math.max(1, Number(page));
-      const limitNum = Math.min(100, Math.max(1, Number(limit)));
-      const offset   = (pageNum - 1) * limitNum;
+    const {
+      page = 1, limit = 10,
+      search, categoryId, publisherId, departmentId, typeId,
+      publicationYear, yearFrom, yearTo, language, authorId,
+      isActive, sortBy = 'created_at', sortOrder = 'DESC',
+    } = req.query;
 
-      // ── Dynamic WHERE ──────────────────────────────────────────────────
-      const where = { isDeleted: false };
+    const pageNum  = Math.max(1, Number(page));
+    const limitNum = Math.min(100, Math.max(1, Number(limit)));
+    const offset   = (pageNum - 1) * limitNum;
 
-      if (isActive !== undefined)  where.isActive        = String(isActive) === 'true';
-      if (categoryId)              where.categoryId      = categoryId;
-      if (publisherId)             where.publisherId     = publisherId;
-      if (departmentId)            where.departmentId    = departmentId;
-      if (typeId)                  where.typeId          = typeId;
-      if (language)                where.language        = language;
+    // ── Dynamic WHERE ──────────────────────────────────────────────────
+    const where = { isDeleted: false };
 
-      if (publicationYear) {
-        where.publicationYear = publicationYear;
-      } else if (yearFrom || yearTo) {
-        where.publicationYear = {};
-        if (yearFrom) where.publicationYear[Op.gte] = Number(yearFrom);
-        if (yearTo)   where.publicationYear[Op.lte] = Number(yearTo);
-      }
+    if (isActive !== undefined)  where.isActive        = String(isActive) === 'true';
+    if (categoryId)              where.categoryId      = categoryId;
+    if (publisherId)             where.publisherId     = publisherId;
+    if (departmentId)            where.departmentId    = departmentId;
+    if (typeId)                  where.typeId          = typeId;
+    if (language)                where.language        = language;
 
-      if (search) {
-        const term = `%${search}%`;
-        where[Op.or] = [
-          { title:   { [Op.iLike]: term } },
-          { titleKh: { [Op.iLike]: term } },
-          { isbn:    { [Op.iLike]: term } },
-        ];
-      }
-
-      // ── Author filter (requires a subquery to avoid JOIN count issues) ─
-      if (authorId) {
-        const { BookAuthor } = require('../models');
-        const authorBookIds = (await BookAuthor.findAll({
-          where: { author_id: authorId },
-          attributes: ['book_id'],
-          raw: true,
-        })).map(r => r.book_id);
-        where.id = { [Op.in]: authorBookIds };
-      }
-
-      // ── Sorting whitelist ──────────────────────────────────────────────
-      const ALLOWED_SORTS = ['created_at', 'title', 'views', 'downloads', 'publication_year', 'updated_at'];
-      const safeSort  = ALLOWED_SORTS.includes(sortBy) ? sortBy : 'created_at';
-      const safeOrder = sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-
-      // ── Query 1: total count (fast — no JOINs) ────────────────────────
-      const total = await Book.count({ where });
-
-      // ── Query 2: paginated books with full includes + ratings ──────────
-      const books = await Book.findAll({
-        where,
-        include: BOOK_INCLUDE,
-        attributes: { include: RATING_ATTRIBUTES },
-        order:  [[safeSort, safeOrder]],
-        limit:  limitNum,
-        offset,
-        subQuery: true,
-      });
-
-      return ResponseFormatter.success(res, {
-        books,
-        total,
-        page:       pageNum,
-        limit:      limitNum,
-        totalPages: Math.ceil(total / limitNum),
-      });
-    } catch (err) {
-      next(err);
+    if (publicationYear) {
+      where.publicationYear = publicationYear;
+    } else if (yearFrom || yearTo) {
+      where.publicationYear = {};
+      if (yearFrom) where.publicationYear[Op.gte] = Number(yearFrom);
+      if (yearTo)   where.publicationYear[Op.lte] = Number(yearTo);
     }
-  }
+
+    if (search) {
+      const term = `%${search}%`;
+      where[Op.or] = [
+        { title:   { [Op.iLike]: term } },
+        { titleKh: { [Op.iLike]: term } },
+        { isbn:    { [Op.iLike]: term } },
+      ];
+    }
+
+    // ── Author filter ──
+    if (authorId) {
+      const authorBookIds = (await BookAuthor.findAll({
+        where: { author_id: authorId },
+        attributes: ['book_id'],
+        raw: true,
+      })).map(r => r.book_id);
+      where.id = { [Op.in]: authorBookIds };
+    }
+
+    // ── Sorting whitelist ──────────────────────────────────────────────
+    const ALLOWED_SORTS = ['created_at', 'title', 'views', 'downloads', 'publication_year', 'updated_at'];
+    const safeSort  = ALLOWED_SORTS.includes(sortBy) ? sortBy : 'created_at';
+    const safeOrder = sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    // ── Query 1: total count (fast — no JOINs) ────────────────────────
+    const total = await Book.count({ where });
+
+    // ── Query 2: paginated books with full includes + ratings ──────────
+    const books = await Book.findAll({
+      where,
+      include: BOOK_INCLUDE,
+      attributes: { include: RATING_ATTRIBUTES },
+      order:  [[safeSort, safeOrder]],
+      limit:  limitNum,
+      offset,
+      subQuery: true,
+    });
+
+    const result = {
+      books,
+      total,
+      page:       pageNum,
+      limit:      limitNum,
+      totalPages: Math.ceil(total / limitNum),
+    };
+
+    bookCache.set(cacheKey, result);
+    return ResponseFormatter.success(res, result);
+  });
 
   // ── GET /api/books/:id 
-  static async getById(req, res, next) {
-    try {
-      const book = await Book.findOne({
-        where: { id: req.params.id, isDeleted: false },
-        include: BOOK_INCLUDE,
-        attributes: { include: RATING_ATTRIBUTES },
-      });
-      if (!book) throw new NotFoundError('Book not found');
+  static getById = asyncHandler(async (req, res) => {
+    const cacheKey = `detail_${req.params.id}`;
+    const cached = bookDetailCache.get(cacheKey);
+    if (cached) return ResponseFormatter.success(res, cached, 'Book detail (cached)');
 
-      // Fire-and-forget view increment — don't block response
-      book.increment('views').catch(() => {});
+    const book = await Book.findOne({
+      where: { id: req.params.id, isDeleted: false },
+      include: BOOK_INCLUDE,
+      attributes: { include: RATING_ATTRIBUTES },
+    });
+    if (!book) throw new NotFoundError('Book not found');
 
-      return ResponseFormatter.success(res, book);
-    } catch (err) { next(err); }
-  }
+    // Fire-and-forget view increment — don't block response
+    book.increment('views').catch(() => {});
+
+    bookDetailCache.set(cacheKey, book);
+    return ResponseFormatter.success(res, book);
+  });
 
   // ── POST /api/books/scan-search
-  static async scanSearch(req, res, next) {
-    try {
-      const file =
-        req.files?.image?.[0] ??
-        req.files?.file?.[0] ??
-        req.files?.cover?.[0] ??
-        null;
+  static scanSearch = asyncHandler(async (req, res) => {
+    const file =
+      req.files?.image?.[0] ??
+      req.files?.file?.[0] ??
+      req.files?.cover?.[0] ??
+      null;
 
-      if (!file) {
-        throw new ValidationError('Image file is required for scan search');
-      }
+    if (!file) {
+      throw new ValidationError('Image file is required for scan search');
+    }
 
-      const rawLimit = Number(req.body?.limit ?? req.query?.limit ?? 5);
-      const safeLimit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 10) : 5;
-      const rawScoreThreshold = req.body?.scoreThreshold ?? req.query?.scoreThreshold;
-      const scoreThreshold =
-        rawScoreThreshold === undefined || rawScoreThreshold === ''
-          ? undefined
-          : Number(rawScoreThreshold);
+    const rawLimit = Number(req.body?.limit ?? req.query?.limit ?? 5);
+    const safeLimit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 10) : 5;
+    const rawScoreThreshold = req.body?.scoreThreshold ?? req.query?.scoreThreshold;
+    const scoreThreshold =
+      rawScoreThreshold === undefined || rawScoreThreshold === ''
+        ? undefined
+        : Number(rawScoreThreshold);
 
-      const vectorResults = await scanBookCover(file, {
-        limit: safeLimit,
-        scoreThreshold: Number.isFinite(scoreThreshold) ? scoreThreshold : undefined,
-      });
+    const vectorResults = await scanBookCover(file, {
+      limit: safeLimit,
+      scoreThreshold: Number.isFinite(scoreThreshold) ? scoreThreshold : undefined,
+    });
 
-      const matches = Array.isArray(vectorResults.matches) ? vectorResults.matches : [];
-      const matchedIds = matches.map((match) => Number(match.book_id)).filter((id) => !Number.isNaN(id));
+    const matches = Array.isArray(vectorResults.matches) ? vectorResults.matches : [];
+    const matchedIds = matches.map((match) => Number(match.book_id)).filter((id) => !Number.isNaN(id));
 
-      if (matchedIds.length === 0) {
-        return ResponseFormatter.success(res, {
-          matches: [],
-          total: 0,
-          source: 'vector-search',
-        });
-      }
-
-      const books = await Book.findAll({
-        where: {
-          id: { [Op.in]: matchedIds },
-          isDeleted: false,
-          isActive: true,
-        },
-        include: BOOK_INCLUDE,
-      });
-
-      const bookMap = new Map(books.map((book) => [Number(book.id), book]));
-      const orderedMatches = matches
-        .map((match) => {
-          const book = bookMap.get(Number(match.book_id));
-          if (!book) return null;
-
-          return {
-            ...book.toJSON(),
-            similarityScore: Number(match.score),
-            scanPayload: match.payload ?? {},
-          };
-        })
-        .filter(Boolean);
-
+    if (matchedIds.length === 0) {
       return ResponseFormatter.success(res, {
-        matches: orderedMatches,
-        total: orderedMatches.length,
+        matches: [],
+        total: 0,
         source: 'vector-search',
       });
-    } catch (err) { next(err); }
-  }
+    }
+
+    const books = await Book.findAll({
+      where: {
+        id: { [Op.in]: matchedIds },
+        isDeleted: false,
+        isActive: true,
+      },
+      include: BOOK_INCLUDE,
+    });
+
+    const bookMap = new Map(books.map((book) => [Number(book.id), book]));
+    const orderedMatches = matches
+      .map((match) => {
+        const book = bookMap.get(Number(match.book_id));
+        if (!book) return null;
+
+        return {
+          ...book.toJSON(),
+          similarityScore: Number(match.score),
+          scanPayload: match.payload ?? {},
+        };
+      })
+      .filter(Boolean);
+
+    return ResponseFormatter.success(res, {
+      matches: orderedMatches,
+      total: orderedMatches.length,
+      source: 'vector-search',
+    });
+  });
 
   // ── POST /api/books
-  static async create(req, res, next) {
-    try {
-      const {
-        title, titleKh, isbn, publicationYear, description,
-        pages,
-        categoryId, publisherId, departmentId, typeId,
-        authorIds = [],   // legacy: [{ id, isPrimaryAuthor }] or [id, id]
-        authorNames,      // preferred: ["David", "Samnang"] — find-or-create by name
-        editorNames,      // ["Editor Name"] — find-or-create by name
-        publisherNames,   // ["Publisher Name"] — find-or-create by name
-        isActive = true,
-      } = req.body;
+  static create = asyncHandler(async (req, res) => {
+    const {
+      title, titleKh, isbn, publicationYear, description,
+      pages,
+      categoryId, publisherId, departmentId, typeId,
+      authorIds = [],   // legacy: [{ id, isPrimaryAuthor }] or [id, id]
+      authorNames,      // preferred: ["David", "Samnang"] — find-or-create by name
+      editorNames,      // ["Editor Name"] — find-or-create by name
+      publisherNames,   // ["Publisher Name"] — find-or-create by name
+      isActive = true,
+    } = req.body;
 
-      if (!title) throw new ValidationError('Title is required');
+    if (!title) throw new ValidationError('Title is required');
 
-      // Check ISBN uniqueness
-      if (isbn) {
-        const exists = await Book.findOne({ where: { isbn } });
-        if (exists) throw new ConflictError(`ISBN '${isbn}' already exists`);
-      }
+    // Check ISBN uniqueness
+    if (isbn) {
+      const exists = await Book.findOne({ where: { isbn } });
+      if (exists) throw new ConflictError(`ISBN '${isbn}' already exists`);
+    }
 
-      // authorIds may arrive as a JSON string when sent via FormData
-      let parsedAuthorIds = authorIds;
-      if (typeof authorIds === 'string') {
-        try { parsedAuthorIds = JSON.parse(authorIds); } catch { parsedAuthorIds = []; }
-      }
+    // authorIds may arrive as a JSON string when sent via FormData
+    let parsedAuthorIds = authorIds;
+    if (typeof authorIds === 'string') {
+      try { parsedAuthorIds = JSON.parse(authorIds); } catch { parsedAuthorIds = []; }
+    }
 
-      // Files are pre-uploaded via POST /api/upload/single — accept URLs from body
-      const coverUrl = req.body.coverUrl ?? null;
-      const pdfUrl   = req.body.pdfUrl   ?? null;
-      // pdfUrls: optional array of additional PDF URLs
-      let pdfUrls = req.body.pdfUrls ?? null;
-      if (typeof pdfUrls === 'string') {
-        try { pdfUrls = JSON.parse(pdfUrls); } catch { pdfUrls = null; }
-      }
-      if (!Array.isArray(pdfUrls)) pdfUrls = null;
+    // Files are pre-uploaded via POST /api/upload/single — accept URLs from body
+    const coverUrl = req.body.coverUrl ?? null;
+    const pdfUrl   = req.body.pdfUrl   ?? null;
+    // pdfUrls: optional array of additional PDF URLs
+    let pdfUrls = req.body.pdfUrls ?? null;
+    if (typeof pdfUrls === 'string') {
+      try { pdfUrls = JSON.parse(pdfUrls); } catch { pdfUrls = null; }
+    }
+    if (!Array.isArray(pdfUrls)) pdfUrls = null;
 
-      const book = await Book.create({
-        title, titleKh, isbn, publicationYear, description,
-        coverUrl, pdfUrl, pdfUrls, pages,
-        categoryId, publisherId, departmentId, typeId, isActive,
-      });
+    const book = await Book.create({
+      title, titleKh, isbn, publicationYear, description,
+      coverUrl, pdfUrl, pdfUrls, pages,
+      categoryId, publisherId, departmentId, typeId, isActive,
+    });
 
-      // Parse authorNames (find-or-create by name)
-      let parsedAuthorNames = authorNames;
-      if (typeof authorNames === 'string') {
-        try { parsedAuthorNames = JSON.parse(authorNames); } catch { parsedAuthorNames = []; }
-      }
-      if (!Array.isArray(parsedAuthorNames)) parsedAuthorNames = [];
+    // Parse authorNames (find-or-create by name)
+    let parsedAuthorNames = authorNames;
+    if (typeof authorNames === 'string') {
+      try { parsedAuthorNames = JSON.parse(authorNames); } catch { parsedAuthorNames = []; }
+    }
+    if (!Array.isArray(parsedAuthorNames)) parsedAuthorNames = [];
 
-      // Attach authors — prefer authorNames (find-or-create) over legacy authorIds
-      if (parsedAuthorNames.length > 0) {
-        const authorRecords = await Promise.all(
-          parsedAuthorNames
-            .map((n, i) => ({ name: String(n ?? '').trim(), idx: i }))
-            .filter(({ name }) => name)
-            .map(async ({ name, idx }) => {
-              const [author] = await Author.findOrCreate({ where: { name }, defaults: { name } });
-              return { authorId: author.id, isPrimary: idx === 0 };
-            })
+    // Attach authors — prefer authorNames (find-or-create) over legacy authorIds
+    if (parsedAuthorNames.length > 0) {
+      const authorRecords = await Promise.all(
+        parsedAuthorNames
+          .map((n, i) => ({ name: String(n ?? '').trim(), idx: i }))
+          .filter(({ name }) => name)
+          .map(async ({ name, idx }) => {
+            const [author] = await Author.findOrCreate({ where: { name }, defaults: { name } });
+            return { authorId: author.id, isPrimary: idx === 0 };
+          })
+      );
+      if (authorRecords.length) {
+        await BookAuthor.bulkCreate(
+          authorRecords.map(r => ({ book_id: book.id, author_id: r.authorId, is_primary_author: r.isPrimary }))
         );
-        if (authorRecords.length) {
-          const { BookAuthor } = require('../models');
-          await BookAuthor.bulkCreate(
-            authorRecords.map(r => ({ book_id: book.id, author_id: r.authorId, is_primary_author: r.isPrimary }))
-          );
-        }
-      } else if (parsedAuthorIds.length > 0) {
-        const pairs = parsedAuthorIds.map((a) =>
-          typeof a === 'object'
-            ? { author_id: a.id, is_primary_author: a.isPrimaryAuthor ?? false }
-            : { author_id: a, is_primary_author: false }
-        );
-        await Promise.all(pairs.map((p) =>
-          book.addAuthor(p.author_id, { through: { isPrimaryAuthor: p.is_primary_author } })
-        ));
       }
+    } else if (parsedAuthorIds.length > 0) {
+      const pairs = parsedAuthorIds.map((a) =>
+        typeof a === 'object'
+          ? { author_id: a.id, is_primary_author: a.isPrimaryAuthor ?? false }
+          : { author_id: a, is_primary_author: false }
+      );
+      await Promise.all(pairs.map((p) =>
+        book.addAuthor(p.author_id, { through: { isPrimaryAuthor: p.is_primary_author } })
+      ));
+    }
 
-      // Attach editors — find-or-create by name
-      let parsedEditorNames = editorNames;
-      if (typeof editorNames === 'string') {
-        try { parsedEditorNames = JSON.parse(editorNames); } catch { parsedEditorNames = []; }
+    // Attach editors — find-or-create by name
+    let parsedEditorNames = editorNames;
+    if (typeof editorNames === 'string') {
+      try { parsedEditorNames = JSON.parse(editorNames); } catch { parsedEditorNames = []; }
+    }
+    if (!Array.isArray(parsedEditorNames)) parsedEditorNames = [];
+    if (parsedEditorNames.length > 0) {
+      const editorIds = await Promise.all(
+        parsedEditorNames
+          .map(r => String(r ?? '').trim())
+          .filter(Boolean)
+          .map(async (name) => {
+            const [editor] = await Editor.findOrCreate({ where: { name }, defaults: { name } });
+            return editor.id;
+          })
+      );
+      if (editorIds.length) {
+        await BookEditor.bulkCreate(editorIds.map(id => ({ book_id: book.id, editor_id: id })));
       }
-      if (!Array.isArray(parsedEditorNames)) parsedEditorNames = [];
-      if (parsedEditorNames.length > 0) {
-        const editorIds = await Promise.all(
-          parsedEditorNames
-            .map(r => String(r ?? '').trim())
-            .filter(Boolean)
-            .map(async (name) => {
-              const [editor] = await Editor.findOrCreate({ where: { name }, defaults: { name } });
-              return editor.id;
-            })
-        );
-        if (editorIds.length) {
-          const { BookEditor } = require('../models');
-          await BookEditor.bulkCreate(editorIds.map(id => ({ book_id: book.id, editor_id: id })));
-        }
+    }
+
+    // Attach publishers — find-or-create by name
+    let parsedPublisherNames = publisherNames;
+    if (typeof publisherNames === 'string') {
+      try { parsedPublisherNames = JSON.parse(publisherNames); } catch { parsedPublisherNames = []; }
+    }
+    if (!Array.isArray(parsedPublisherNames)) parsedPublisherNames = [];
+    let firstPublisherId = null;
+    if (parsedPublisherNames.length > 0) {
+      const pubIds = await Promise.all(
+        parsedPublisherNames
+          .map(r => String(r ?? '').trim())
+          .filter(Boolean)
+          .map(async (name) => {
+            const [publisher] = await Publisher.findOrCreate({ where: { name }, defaults: { name } });
+            return publisher.id;
+          })
+      );
+      if (pubIds.length) {
+        await PublishersBooks.bulkCreate(pubIds.map(id => ({ book_id: book.id, publisher_id: id })));
+        firstPublisherId = pubIds[0];
       }
+    }
+    if (firstPublisherId) await book.update({ publisherId: firstPublisherId });
 
-      // Attach publishers — find-or-create by name
-      let parsedPublisherNames = publisherNames;
-      if (typeof publisherNames === 'string') {
-        try { parsedPublisherNames = JSON.parse(publisherNames); } catch { parsedPublisherNames = []; }
-      }
-      if (!Array.isArray(parsedPublisherNames)) parsedPublisherNames = [];
-      let firstPublisherId = null;
-      if (parsedPublisherNames.length > 0) {
-        const pubIds = await Promise.all(
-          parsedPublisherNames
-            .map(r => String(r ?? '').trim())
-            .filter(Boolean)
-            .map(async (name) => {
-              const [publisher] = await Publisher.findOrCreate({ where: { name }, defaults: { name } });
-              return publisher.id;
-            })
-        );
-        if (pubIds.length) {
-          const { PublishersBooks } = require('../models');
-          await PublishersBooks.bulkCreate(pubIds.map(id => ({ book_id: book.id, publisher_id: id })));
-          firstPublisherId = pubIds[0];
-        }
-      }
-      if (firstPublisherId) await book.update({ publisherId: firstPublisherId });
+    const created = await Book.findOne({
+      where: { id: book.id },
+      include: BOOK_INCLUDE,
+    });
 
-      const created = await Book.findOne({
-        where: { id: book.id },
-        include: BOOK_INCLUDE,
-      });
+    await syncBookCover(created);
+    bookCache.clear(); // invalidate all listings
 
-      await syncBookCover(created);
+    // Log activity
+    logActivity({
+      userId: req.user?.id,
+      action: 'uploaded',
+      targetId: book.id,
+      targetName: book.title,
+      targetType: 'book'
+    });
 
-      // Log activity
-      logActivity({
-        userId: req.user?.id,
-        action: 'uploaded',
-        targetId: book.id,
-        targetName: book.title,
-        targetType: 'book'
-      });
+    // Real-time: broadcast to admin + public (no duplication)
+    emitBroadcast(EVENTS.BOOK_CREATED, { book: created });
 
-      // Real-time: broadcast to admin + public (no duplication)
-      emitBroadcast(EVENTS.BOOK_CREATED, { book: created });
+    // Web Push: notify all subscribers of the new book
+    broadcastNotification(
+      '📚 New Book Added',
+      `"${created.title}" is now available in the library.`,
+      `/books/${created.id}`
+    ).catch(() => {}); // fire-and-forget
 
-      // Web Push: notify all subscribers of the new book
-      broadcastNotification(
-        '📚 New Book Added',
-        `"${created.title}" is now available in the library.`,
-        `/books/${created.id}`
-      ).catch(() => {}); // fire-and-forget
-
-      return ResponseFormatter.success(res, created, 'Book created successfully', 201);
-    } catch (err) { next(err); }
-  }
+    return ResponseFormatter.success(res, created, 'Book created successfully', 201);
+  });
 
   // ── PUT /api/books/:id
-  static async update(req, res, next) {
-    try {
-      const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
-      if (!book) throw new NotFoundError('Book not found');
+  static update = asyncHandler(async (req, res) => {
+    const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
+    if (!book) throw new NotFoundError('Book not found');
 
-      const {
-        title, titleKh, isbn, publicationYear, description,
-        pages,
-        categoryId, publisherId, departmentId, typeId,
-        authorIds,   // legacy
-        authorNames, // preferred: ["David", "Samnang"] — find-or-create by name
-        editorNames, // ["Editor Name"] — find-or-create by name
-        publisherNames, // ["Publisher Name"] — find-or-create by name
-        isActive,
-      } = req.body;
+    const {
+      title, titleKh, isbn, publicationYear, description,
+      pages,
+      categoryId, publisherId, departmentId, typeId,
+      authorIds,   // legacy
+      authorNames, // preferred: ["David", "Samnang"] — find-or-create by name
+      editorNames, // ["Editor Name"] — find-or-create by name
+      publisherNames, // ["Publisher Name"] — find-or-create by name
+      isActive,
+    } = req.body;
 
-      // Check ISBN uniqueness (exclude self)
-      if (isbn && isbn !== book.isbn) {
-        const exists = await Book.findOne({ where: { isbn, id: { [Op.ne]: book.id } } });
-        if (exists) throw new ConflictError(`ISBN '${isbn}' already exists`);
-      }
+    // Check ISBN uniqueness (exclude self)
+    if (isbn && isbn !== book.isbn) {
+      const exists = await Book.findOne({ where: { isbn, id: { [Op.ne]: book.id } } });
+      if (exists) throw new ConflictError(`ISBN '${isbn}' already exists`);
+    }
 
-      // authorIds may arrive as a JSON string when sent via FormData
-      let parsedAuthorIds = authorIds;
-      if (typeof authorIds === 'string') {
-        try { parsedAuthorIds = JSON.parse(authorIds); } catch { parsedAuthorIds = undefined; }
-      }
+    // authorIds may arrive as a JSON string when sent via FormData
+    let parsedAuthorIds = authorIds;
+    if (typeof authorIds === 'string') {
+      try { parsedAuthorIds = JSON.parse(authorIds); } catch { parsedAuthorIds = undefined; }
+    }
 
-      // Files are pre-uploaded via POST /api/upload/single — accept URLs from body
-      const coverUrl = req.body.coverUrl;
-      const pdfUrl   = req.body.pdfUrl;
-      // pdfUrls: optional array of additional PDF URLs
-      let pdfUrls = req.body.pdfUrls;
-      if (typeof pdfUrls === 'string') {
-        try { pdfUrls = JSON.parse(pdfUrls); } catch { pdfUrls = undefined; }
-      }
-      if (pdfUrls !== undefined && !Array.isArray(pdfUrls)) pdfUrls = undefined;
+    // Files are pre-uploaded via POST /api/upload/single — accept URLs from body
+    const coverUrl = req.body.coverUrl;
+    const pdfUrl   = req.body.pdfUrl;
+    // pdfUrls: optional array of additional PDF URLs
+    let pdfUrls = req.body.pdfUrls;
+    if (typeof pdfUrls === 'string') {
+      try { pdfUrls = JSON.parse(pdfUrls); } catch { pdfUrls = undefined; }
+    }
+    if (pdfUrls !== undefined && !Array.isArray(pdfUrls)) pdfUrls = undefined;
 
-      await book.update({
-        ...(title !== undefined && { title }),
-        ...(titleKh !== undefined && { titleKh }),
-        ...(isbn !== undefined && { isbn }),
-        ...(publicationYear !== undefined && { publicationYear }),
-        ...(description !== undefined && { description }),
-        ...(coverUrl !== undefined && { coverUrl }),
-        ...(pdfUrl !== undefined && { pdfUrl }),
-        ...(pdfUrls !== undefined && { pdfUrls }),
-        ...(pages !== undefined && { pages }),
-        ...(categoryId !== undefined && { categoryId }),
-        ...(publisherId !== undefined && { publisherId }),
-        ...(departmentId !== undefined && { departmentId }),
-        ...(typeId !== undefined && { typeId }),
-        ...(isActive !== undefined && { isActive }),
-      });
+    await book.update({
+      ...(title !== undefined && { title }),
+      ...(titleKh !== undefined && { titleKh }),
+      ...(isbn !== undefined && { isbn }),
+      ...(publicationYear !== undefined && { publicationYear }),
+      ...(description !== undefined && { description }),
+      ...(coverUrl !== undefined && { coverUrl }),
+      ...(pdfUrl !== undefined && { pdfUrl }),
+      ...(pdfUrls !== undefined && { pdfUrls }),
+      ...(pages !== undefined && { pages }),
+      ...(categoryId !== undefined && { categoryId }),
+      ...(publisherId !== undefined && { publisherId }),
+      ...(departmentId !== undefined && { departmentId }),
+      ...(typeId !== undefined && { typeId }),
+      ...(isActive !== undefined && { isActive }),
+    });
 
-      // Parse authorNames for update
-      let parsedAuthorNames = authorNames;
-      if (typeof authorNames === 'string') {
-        try { parsedAuthorNames = JSON.parse(authorNames); } catch { parsedAuthorNames = undefined; }
-      }
+    // Parse authorNames for update
+    let parsedAuthorNames = authorNames;
+    if (typeof authorNames === 'string') {
+      try { parsedAuthorNames = JSON.parse(authorNames); } catch { parsedAuthorNames = undefined; }
+    }
 
-      // Replace authors — prefer authorNames (find-or-create) over legacy authorIds
-      if (Array.isArray(parsedAuthorNames)) {
-        await book.setAuthors([]); // clear existing
-        const authorRecords = await Promise.all(
-          parsedAuthorNames
-            .map((n, i) => ({ name: String(n ?? '').trim(), idx: i }))
-            .filter(({ name }) => name)
-            .map(async ({ name, idx }) => {
-              const [author] = await Author.findOrCreate({ where: { name }, defaults: { name } });
-              return { authorId: author.id, isPrimary: idx === 0 };
-            })
+    // Replace authors — prefer authorNames (find-or-create) over legacy authorIds
+    if (Array.isArray(parsedAuthorNames)) {
+      await book.setAuthors([]); // clear existing
+      const authorRecords = await Promise.all(
+        parsedAuthorNames
+          .map((n, i) => ({ name: String(n ?? '').trim(), idx: i }))
+          .filter(({ name }) => name)
+          .map(async ({ name, idx }) => {
+            const [author] = await Author.findOrCreate({ where: { name }, defaults: { name } });
+            return { authorId: author.id, isPrimary: idx === 0 };
+          })
+      );
+      if (authorRecords.length) {
+        await BookAuthor.bulkCreate(
+          authorRecords.map(r => ({ book_id: book.id, author_id: r.authorId, is_primary_author: r.isPrimary }))
         );
-        if (authorRecords.length) {
-          const { BookAuthor } = require('../models');
-          await BookAuthor.bulkCreate(
-            authorRecords.map(r => ({ book_id: book.id, author_id: r.authorId, is_primary_author: r.isPrimary }))
-          );
-        }
-      } else if (parsedAuthorIds !== undefined) {
-        // Legacy authorIds path
-        await book.setAuthors([]); // clear
-        if (parsedAuthorIds.length > 0) {
-          await Promise.all(parsedAuthorIds.map((a) => {
-            const id = typeof a === 'object' ? a.id : a;
-            const isPrimary = typeof a === 'object' ? (a.isPrimaryAuthor ?? false) : false;
-            return book.addAuthor(id, { through: { isPrimaryAuthor: isPrimary } });
-          }));
-        }
       }
-
-      // Replace editors — find-or-create by name
-      let parsedEditorNames = editorNames;
-      if (typeof editorNames === 'string') {
-        try { parsedEditorNames = JSON.parse(editorNames); } catch { parsedEditorNames = undefined; }
+    } else if (parsedAuthorIds !== undefined) {
+      // Legacy authorIds path
+      await book.setAuthors([]); // clear
+      if (parsedAuthorIds.length > 0) {
+        await Promise.all(parsedAuthorIds.map((a) => {
+          const id = typeof a === 'object' ? a.id : a;
+          const isPrimary = typeof a === 'object' ? (a.isPrimaryAuthor ?? false) : false;
+          return book.addAuthor(id, { through: { isPrimaryAuthor: isPrimary } });
+        }));
       }
-      if (Array.isArray(parsedEditorNames)) {
-        await book.setEditors([]); // clear existing
-        const editorIds = await Promise.all(
-          parsedEditorNames
-            .map(r => String(r ?? '').trim())
-            .filter(Boolean)
-            .map(async (name) => {
-              const [editor] = await Editor.findOrCreate({ where: { name }, defaults: { name } });
-              return editor.id;
-            })
-        );
-        if (editorIds.length) {
-          const { BookEditor } = require('../models');
-          await BookEditor.bulkCreate(editorIds.map(id => ({ book_id: book.id, editor_id: id })));
-        }
+    }
+
+    // Replace editors — find-or-create by name
+    let parsedEditorNames = editorNames;
+    if (typeof editorNames === 'string') {
+      try { parsedEditorNames = JSON.parse(editorNames); } catch { parsedEditorNames = undefined; }
+    }
+    if (Array.isArray(parsedEditorNames)) {
+      await book.setEditors([]); // clear existing
+      const editorIds = await Promise.all(
+        parsedEditorNames
+          .map(r => String(r ?? '').trim())
+          .filter(Boolean)
+          .map(async (name) => {
+            const [editor] = await Editor.findOrCreate({ where: { name }, defaults: { name } });
+            return editor.id;
+          })
+      );
+      if (editorIds.length) {
+        await BookEditor.bulkCreate(editorIds.map(id => ({ book_id: book.id, editor_id: id })));
       }
+    }
 
-      // Replace publishers — find-or-create by name
-      let parsedPublisherNames = publisherNames;
-      if (typeof publisherNames === 'string') {
-        try { parsedPublisherNames = JSON.parse(publisherNames); } catch { parsedPublisherNames = undefined; }
+    // Replace publishers — find-or-create by name
+    let parsedPublisherNames = publisherNames;
+    if (typeof publisherNames === 'string') {
+      try { parsedPublisherNames = JSON.parse(publisherNames); } catch { parsedPublisherNames = undefined; }
+    }
+    if (Array.isArray(parsedPublisherNames)) {
+      await book.setPublishers([]);
+      let firstPublisherId = null;
+      const pubIds = await Promise.all(
+        parsedPublisherNames
+          .map(r => String(r ?? '').trim())
+          .filter(Boolean)
+          .map(async (name) => {
+            const [publisher] = await Publisher.findOrCreate({ where: { name }, defaults: { name } });
+            return publisher.id;
+          })
+      );
+      if (pubIds.length) {
+        await PublishersBooks.bulkCreate(pubIds.map(id => ({ book_id: book.id, publisher_id: id })));
+        firstPublisherId = pubIds[0];
       }
-      if (Array.isArray(parsedPublisherNames)) {
-        await book.setPublishers([]);
-        let firstPublisherId = null;
-        const pubIds = await Promise.all(
-          parsedPublisherNames
-            .map(r => String(r ?? '').trim())
-            .filter(Boolean)
-            .map(async (name) => {
-              const [publisher] = await Publisher.findOrCreate({ where: { name }, defaults: { name } });
-              return publisher.id;
-            })
-        );
-        if (pubIds.length) {
-          const { PublishersBooks } = require('../models');
-          await PublishersBooks.bulkCreate(pubIds.map(id => ({ book_id: book.id, publisher_id: id })));
-          firstPublisherId = pubIds[0];
-        }
-        if (firstPublisherId) await book.update({ publisherId: firstPublisherId });
-      }
+      if (firstPublisherId) await book.update({ publisherId: firstPublisherId });
+    }
 
-      const updated = await Book.findOne({ where: { id: book.id }, include: BOOK_INCLUDE });
-      await syncBookCover(updated);
-      // Log activity
-      logActivity({
-        userId: req.user?.id,
-        action: 'updated',
-        targetId: book.id,
-        targetName: book.title,
-        targetType: 'book'
-      });
+    const updated = await Book.findOne({ where: { id: book.id }, include: BOOK_INCLUDE });
+    await syncBookCover(updated);
 
-      // Real-time: broadcast to admin + public (no duplication)
-      emitBroadcast(EVENTS.BOOK_UPDATED, { book: updated });
+    bookCache.clear(); // invalidate listings
+    bookDetailCache.delete(`detail_${book.id}`); // invalidate specific detail
 
-      return ResponseFormatter.success(res, updated, 'Book updated successfully');
-    } catch (err) { next(err); }
-  }
+    // Log activity
+    logActivity({
+      userId: req.user?.id,
+      action: 'updated',
+      targetId: book.id,
+      targetName: book.title,
+      targetType: 'book'
+    });
+
+    // Real-time: broadcast to admin + public (no duplication)
+    emitBroadcast(EVENTS.BOOK_UPDATED, { book: updated });
+
+    return ResponseFormatter.success(res, updated, 'Book updated successfully');
+  });
 
   // ── DELETE /api/books/:id (soft delete) 
-  static async delete(req, res, next) {
+  static delete = asyncHandler(async (req, res) => {
+    const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
+    if (!book) throw new NotFoundError('Book not found');
     try {
-      const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
-      if (!book) throw new NotFoundError('Book not found');
-      try {
-        await deleteBookCover(book.id);
-      } catch {
-        // Deleting the vector should not block the primary record deletion.
-      }
-      await book.update({ isDeleted: true, isActive: false });
+      await deleteBookCover(book.id);
+    } catch {
+      // Deleting the vector should not block the primary record deletion.
+    }
+    await book.update({ isDeleted: true, isActive: false });
 
-      // Log activity
-      logActivity({
-        userId: req.user?.id,
-        action: 'deleted',
-        targetId: book.id,
-        targetName: book.title,
-        targetType: 'book'
-      });
+    bookCache.clear(); // invalidate listings
+    bookDetailCache.delete(`detail_${book.id}`); // invalidate specific detail
 
-      // Real-time: broadcast to admin + public (no duplication)
-      emitBroadcast(EVENTS.BOOK_DELETED, { bookId: book.id });
+    // Log activity
+    logActivity({
+      userId: req.user?.id,
+      action: 'deleted',
+      targetId: book.id,
+      targetName: book.title,
+      targetType: 'book'
+    });
 
-      return ResponseFormatter.noContent(res, null, 'Book deleted successfully');
-    } catch (err) { next(err); }
-  }
+    // Real-time: broadcast to admin + public (no duplication)
+    emitBroadcast(EVENTS.BOOK_DELETED, { bookId: book.id });
+
+    return ResponseFormatter.noContent(res, null, 'Book deleted successfully');
+  });
 
   // ── GET /api/books/:id/downloads
-  static async getDownloads(req, res, next) {
-    try {
-      const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
-      if (!book) throw new NotFoundError('Book not found');
+  static getDownloads = asyncHandler(async (req, res) => {
+    const book = await Book.findOne({ where: { id: req.params.id, isDeleted: false } });
+    if (!book) throw new NotFoundError('Book not found');
 
-      const { page = 1, limit = 20 } = req.query;
-      const offset = (Number(page) - 1) * Number(limit);
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
 
-      const { count, rows } = await Download.findAndCountAll({
-        where: { bookId: book.id },
-        include: [{ model: User, as: 'User', attributes: ['id', 'username', 'firstName', 'lastName', 'email'] }],
-        order: [['downloadedAt', 'DESC']],
-        limit: Number(limit),
-        offset,
-      });
+    const { count, rows } = await Download.findAndCountAll({
+      where: { bookId: book.id },
+      include: [{ model: User, as: 'User', attributes: ['id', 'username', 'firstName', 'lastName', 'email'] }],
+      order: [['downloadedAt', 'DESC']],
+      limit: Number(limit),
+      offset,
+    });
 
-      return ResponseFormatter.success(res, {
-        downloads: rows, total: count,
-        page: Number(page), totalPages: Math.ceil(count / Number(limit)),
-      });
-    } catch (err) { next(err); }
-  }
+    return ResponseFormatter.success(res, {
+      downloads: rows, total: count,
+      page: Number(page), totalPages: Math.ceil(count / Number(limit)),
+    });
+  });
 
   // ── GET /api/books/:id/summary  (AI-generated, Gemini, cached 24 h)
-  static async getSummary(req, res, next) {
-    try {
-      const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-      if (!BookController._sumCache) BookController._sumCache = new Map();
-      const key    = `sum_${req.params.id}`;
-      const cached = BookController._sumCache.get(key);
-      if (cached && Date.now() - cached.ts < 24 * 60 * 60 * 1000) {
-        return ResponseFormatter.success(res, { summary: cached.text }, 'Book summary (cached)');
-      }
-      const book = await Book.findOne({
-        where: { id: req.params.id, isDeleted: false },
-        include: [
-          { model: Author,   as: 'Authors',  attributes: ['name'] },
-          { model: Category, as: 'Category', attributes: ['name'] },
-        ],
-        attributes: ['id', 'title', 'description', 'publicationYear'],
-      });
-      if (!book) throw new NotFoundError('Book not found');
+  static getSummary = asyncHandler(async (req, res) => {
+    const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+    if (!BookController._sumCache) BookController._sumCache = new Map();
+    const key    = `sum_${req.params.id}`;
+    const cached = BookController._sumCache.get(key);
+    if (cached && Date.now() - cached.ts < 24 * 60 * 60 * 1000) {
+      return ResponseFormatter.success(res, { summary: cached.text }, 'Book summary (cached)');
+    }
+    const book = await Book.findOne({
+      where: { id: req.params.id, isDeleted: false },
+      include: [
+        { model: Author,   as: 'Authors',  attributes: ['name'] },
+        { model: Category, as: 'Category', attributes: ['name'] },
+      ],
+      attributes: ['id', 'title', 'description', 'publicationYear'],
+    });
+    if (!book) throw new NotFoundError('Book not found');
 
-      const authorsStr = (book.Authors || []).map((a) => a.name).join(', ') || 'Unknown';
-      const prompt = `Write a concise 3-sentence academic summary for this library book.
+    const authorsStr = (book.Authors || []).map((a) => a.name).join(', ') || 'Unknown';
+    const prompt = `Write a concise 3-sentence academic summary for this library book.
 Title: ${book.title}
 Author(s): ${authorsStr}
 Category: ${book.Category?.name || 'General'}
 Description: ${book.description || '(no description)'}
 Requirements: exactly 3 sentences, academic tone, no first person, mention the key topic and who benefits from reading it.`;
 
-      const r = await fetch(`${GEMINI_URL}?key=${process.env.GOOGLE_AI_API_KEY}`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
-        }),
-      });
-      const data    = await r.json();
-      const summary = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
-        || book.description?.slice(0, 400)
-        || 'No summary available.';
+    const r = await fetch(`${GEMINI_URL}?key=${process.env.GOOGLE_AI_API_KEY}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
+      }),
+    });
+    const data    = await r.json();
+    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+      || book.description?.slice(0, 400)
+      || 'No summary available.';
 
-      BookController._sumCache.set(key, { text: summary, ts: Date.now() });
-      return ResponseFormatter.success(res, { summary }, 'Book summary generated');
-    } catch (err) { next(err); }
-  }
+    BookController._sumCache.set(key, { text: summary, ts: Date.now() });
+    return ResponseFormatter.success(res, { summary }, 'Book summary generated');
+  });
 }
 
 module.exports = BookController;
