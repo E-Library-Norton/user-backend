@@ -141,6 +141,15 @@ class BookController {
 
       // Fire-and-forget view increment — don't block response
       book.increment('views').catch(() => {});
+      
+      // Log view activity
+      logActivity({ 
+        userId: req.user?.id, 
+        action: 'view', 
+        targetId: book.id, 
+        targetName: book.title, 
+        targetType: 'book' 
+      }).catch(() => {});
 
       return ResponseFormatter.success(res, book);
     } catch (err) { next(err); }

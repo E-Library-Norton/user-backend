@@ -8,7 +8,6 @@ const {
     MaterialType,
     Role,
     Activity,
-    sequelize
 } = require("../models");
 const { Op, fn, col, literal } = require("sequelize");
 const ResponseFormatter = require("../utils/responseFormatter");
@@ -33,12 +32,12 @@ class StatsController {
             // 1. Basic counts — run in parallel
             const [totalBooks, totalMembers, totalActiveMembers, totalAuthors, totalCategories, totalDownloads] =
                     await Promise.all([
-                    Book.count({ where: { isDeleted: false } }).catch(() => 0),
-                    User.count({ where: { isDeleted: false } }).catch(() => 0),
-                    User.count({ where: { isActive: true, isDeleted: false } }).catch(() => 0),
-                    Author.count().catch(() => 0),
-                    Category.count().catch(() => 0),
-                    Download.count().catch(() => 0),
+                    Book.count({ where: { isDeleted: false } }).catch(err => { console.error("Error counting books:", err); return 0; }),
+                    User.count({ where: { isDeleted: false } }).catch(err => { console.error("Error counting users:", err); return 0; }),
+                    User.count({ where: { isActive: true, isDeleted: false } }).catch(err => { console.error("Error counting active users:", err); return 0; }),
+                    Author.count().catch(err => { console.error("Error counting authors:", err); return 0; }),
+                    Category.count().catch(err => { console.error("Error counting categories:", err); return 0; }),
+                    Download.count().catch(err => { console.error("Error counting downloads:", err); return 0; }),
                 ]);
 
             // ── Build activity where clause (needed by queries 5 & 6) ──
@@ -56,16 +55,32 @@ class StatsController {
 
             const currentYear = new Date().getFullYear();
             const startYear = currentYear - 4;
+            const twelveMonthsAgo = new Date(new Date().setMonth(new Date().getMonth() - 11));
+            twelveMonthsAgo.setDate(1); // Start of month
+            twelveMonthsAgo.setHours(0, 0, 0, 0);
+
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+            thirtyDaysAgo.setHours(0, 0, 0, 0);
 
             // ── Run ALL independent queries in parallel ──────────────────────
             const [
                 typeRows,
                 yearRows,
-                catViewRows,       // merged: category distribution + views in ONE query
-                monthRows,
+                catViewRows,
                 totalCount,
                 activities,
                 roleRows,
+                // Time-series queries
+                monthlyBookRows,
+                monthlyJoinRows,
+                monthlyDownloadRows,
+                monthlyViewRows,
+                dailyJoinRows,
+                dailyDownloadRows,
+                dailyViewRows,
+                yearlyJoinRows,
+                yearlyDownloadRows,
             ] = await Promise.all([
                 // 2. Material type counts
                 Book.findAll({
@@ -78,13 +93,13 @@ class StatsController {
                     group: ['typeId', 'MaterialType.id', 'MaterialType.name'],
                     raw: true,
                     nest: true,
-                }).catch(() => []),
+                }).catch(err => { console.error("Error in query 2:", err); return []; }),
 
                 // 3. Upload stats by year
                 Book.findAll({
                     where: {
                         isDeleted: false,
-                        created_at: { [Op.gte]: new Date(`${startYear}-01-01`) },
+                        createdAt: { [Op.gte]: new Date(`${startYear}-01-01`) },
                     },
                     attributes: [
                         [fn('EXTRACT', literal("YEAR FROM \"created_at\"")), 'year'],
@@ -92,9 +107,9 @@ class StatsController {
                     ],
                     group: [fn('EXTRACT', literal("YEAR FROM \"created_at\""))],
                     raw: true,
-                }).catch(() => []),
+                }).catch(err => { console.error("Error in query 3:", err); return []; }),
 
-                // 4. Category distribution + views — SINGLE query (was 2 separate queries)
+                // 4. Category distribution + views
                 Book.findAll({
                     where: { isDeleted: false },
                     include: [{ model: Category, as: 'Category', attributes: ['name'] }],
@@ -108,27 +123,10 @@ class StatsController {
                     subQuery: false,
                     raw: true,
                     nest: true,
-                }).catch(() => []),
-
-                // 4c. Monthly reading stats (last 12 months)
-                Book.findAll({
-                    where: {
-                        isDeleted: false,
-                        created_at: { [Op.gte]: new Date(new Date().setMonth(new Date().getMonth() - 11)) },
-                    },
-                    attributes: [
-                        [fn('TO_CHAR', col('created_at'), literal("'YYYY-MM'")), 'month'],
-                        [fn('SUM', col('views')), 'total_views'],
-                        [fn('SUM', col('downloads')), 'total_downloads'],
-                        [fn('COUNT', col('id')), 'new_books'],
-                    ],
-                    group: [fn('TO_CHAR', col('created_at'), literal("'YYYY-MM'"))],
-                    order: [[fn('TO_CHAR', col('created_at'), literal("'YYYY-MM'")), 'ASC']],
-                    raw: true,
-                }).catch(() => []),
+                }).catch(err => { console.error("Error in query 4:", err); return []; }),
 
                 // 5a. Activity count
-                Activity.count({ where: activityWhere }).catch(() => 0),
+                Activity.count({ where: activityWhere }).catch(err => { console.error("Error in query 5a:", err); return 0; }),
 
                 // 5b. Recent activities
                 Activity.findAll({
@@ -142,7 +140,7 @@ class StatsController {
                     order: [['createdAt', 'DESC']],
                     limit: 10,
                     subQuery: false,
-                }).catch(() => []),
+                }).catch(err => { console.error("Error in query 5b:", err); return []; }),
 
                 // 6. Role activity stats
                 Activity.findAll({
@@ -167,22 +165,94 @@ class StatsController {
                     group: ['User->Roles.name', 'Activity.action'],
                     raw: true,
                     nest: true,
-                }).catch(() => []),
+                }).catch(err => { console.error("Error in query 6:", err); return []; }),
+
+                // 7. Monthly New Books
+                Book.findAll({
+                    where: { isDeleted: false, createdAt: { [Op.gte]: twelveMonthsAgo } },
+                    attributes: [[fn('TO_CHAR', col('created_at'), literal("'YYYY-MM'")), 'month'], [fn('COUNT', col('id')), 'count']],
+                    group: [fn('TO_CHAR', col('created_at'), literal("'YYYY-MM'"))],
+                    raw: true,
+                }).catch(err => { console.error("Error in query 7:", err); return []; }),
+
+                // 8. Monthly User Joins
+                User.findAll({
+                    where: { isDeleted: false, createdAt: { [Op.gte]: twelveMonthsAgo } },
+                    attributes: [[fn('TO_CHAR', col('created_at'), literal("'YYYY-MM'")), 'month'], [fn('COUNT', col('id')), 'count']],
+                    group: [fn('TO_CHAR', col('created_at'), literal("'YYYY-MM'"))],
+                    raw: true,
+                }).catch(err => { console.error("Error in query 8:", err); return []; }),
+
+                // 9. Monthly Downloads
+                Download.findAll({
+                    where: { downloadedAt: { [Op.gte]: twelveMonthsAgo } },
+                    attributes: [[fn('TO_CHAR', col('downloaded_at'), literal("'YYYY-MM'")), 'month'], [fn('COUNT', col('id')), 'count']],
+                    group: [fn('TO_CHAR', col('downloaded_at'), literal("'YYYY-MM'"))],
+                    raw: true,
+                }).catch(err => { console.error("Error in query 9:", err); return []; }),
+
+                // 10. Monthly Views (from Activity)
+                Activity.findAll({
+                    where: { action: 'view', createdAt: { [Op.gte]: twelveMonthsAgo } },
+                    attributes: [[fn('TO_CHAR', col('created_at'), literal("'YYYY-MM'")), 'month'], [fn('COUNT', col('id')), 'count']],
+                    group: [fn('TO_CHAR', col('created_at'), literal("'YYYY-MM'"))],
+                    raw: true,
+                }).catch(err => { console.error("Error in query 10:", err); return []; }),
+
+                // 11. Daily Joins (last 30 days)
+                User.findAll({
+                    where: { isDeleted: false, createdAt: { [Op.gte]: thirtyDaysAgo } },
+                    attributes: [[fn('TO_CHAR', col('created_at'), literal("'YYYY-MM-DD'")), 'date'], [fn('COUNT', col('id')), 'count']],
+                    group: [fn('TO_CHAR', col('created_at'), literal("'YYYY-MM-DD'"))],
+                    raw: true,
+                }).catch(err => { console.error("Error in query 11:", err); return []; }),
+
+                // 12. Daily Downloads
+                Download.findAll({
+                    where: { downloadedAt: { [Op.gte]: thirtyDaysAgo } },
+                    attributes: [[fn('TO_CHAR', col('downloaded_at'), literal("'YYYY-MM-DD'")), 'date'], [fn('COUNT', col('id')), 'count']],
+                    group: [fn('TO_CHAR', col('downloaded_at'), literal("'YYYY-MM-DD'"))],
+                    raw: true,
+                }).catch(err => { console.error("Error in query 12:", err); return []; }),
+
+                // 13. Daily Views
+                Activity.findAll({
+                    where: { action: 'view', createdAt: { [Op.gte]: thirtyDaysAgo } },
+                    attributes: [[fn('TO_CHAR', col('created_at'), literal("'YYYY-MM-DD'")), 'date'], [fn('COUNT', col('id')), 'count']],
+                    group: [fn('TO_CHAR', col('created_at'), literal("'YYYY-MM-DD'"))],
+                    raw: true,
+                }).catch(err => { console.error("Error in query 13:", err); return []; }),
+
+                // 14. Yearly Joins
+                User.findAll({
+                    where: { isDeleted: false, createdAt: { [Op.gte]: new Date(`${startYear}-01-01`) } },
+                    attributes: [[fn('EXTRACT', literal("YEAR FROM \"created_at\"")), 'year'], [fn('COUNT', col('id')), 'count']],
+                    group: [fn('EXTRACT', literal("YEAR FROM \"created_at\""))],
+                    raw: true,
+                }).catch(err => { console.error("Error in query 14:", err); return []; }),
+
+                // 15. Yearly Downloads
+                Download.findAll({
+                    where: { downloadedAt: { [Op.gte]: new Date(`${startYear}-01-01`) } },
+                    attributes: [[fn('EXTRACT', literal("YEAR FROM \"downloaded_at\"")), 'year'], [fn('COUNT', col('id')), 'count']],
+                    group: [fn('EXTRACT', literal("YEAR FROM \"downloaded_at\""))],
+                    raw: true,
+                }).catch(err => { console.error("Error in query 15:", err); return []; }),
             ]);
 
             // ── Process results (pure JS, no DB) ────────────────────────────
 
-            // 2. Material type counts
+            // 1. Material type counts
             const typeCounts = { theses: 0, journals: 0, articles: 0 };
             for (const row of typeRows) {
-                const name = (row.MaterialType?.name ).toLowerCase();
+                const name = (row.MaterialType?.name || row['MaterialType.name'] || "").toLowerCase();
                 const cnt = parseInt(row.count) || 0;
                 if (name.includes('thesis') || name.includes('dissertation')) typeCounts.theses += cnt;
                 else if (name.includes('journal')) typeCounts.journals += cnt;
                 else if (name.includes('article')) typeCounts.articles += cnt;
             }
 
-            // 3. Upload stats
+            // 2. Yearly Upload stats (Books)
             const yearMap = {};
             for (const r of yearRows) yearMap[r.year] = parseInt(r.count) || 0;
             const uploadStats = [];
@@ -197,12 +267,69 @@ class StatsController {
                 });
             }
 
-            // 4. Category distribution + views (from single merged query)
+            // 3. Merged Monthly Trends (Joins, Downloads, Views, New Books)
+            const monthlyTrends = [];
+            const now = new Date();
+            for (let i = 11; i >= 0; i--) {
+                // Safe date generation (starts at 1st of month)
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                
+                const newBooks = parseInt(monthlyBookRows.find(r => r.month === monthStr)?.count) || 0;
+                const joins = parseInt(monthlyJoinRows.find(r => r.month === monthStr)?.count) || 0;
+                const downloads = parseInt(monthlyDownloadRows.find(r => r.month === monthStr)?.count) || 0;
+                const views = parseInt(monthlyViewRows.find(r => r.month === monthStr)?.count) || 0;
+
+                monthlyTrends.push({
+                    month: monthStr,
+                    new_books: newBooks,
+                    joins,
+                    downloads,
+                    views,
+                });
+            }
+
+            // 4. Merged Daily Trends (last 30 days)
+            const dailyTrends = [];
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+                const joins = parseInt(dailyJoinRows.find(r => r.date === dateStr)?.count) || 0;
+                const downloads = parseInt(dailyDownloadRows.find(r => r.date === dateStr)?.count) || 0;
+                const views = parseInt(dailyViewRows.find(r => r.date === dateStr)?.count) || 0;
+
+                dailyTrends.push({
+                    date: dateStr,
+                    joins,
+                    downloads,
+                    views,
+                });
+            }
+
+            // 5. Merged Yearly Trends (last 5 years)
+            const yearlyTrends = [];
+            const yearJoinMap = {};
+            const yearDownloadMap = {};
+            for (const r of yearlyJoinRows) yearJoinMap[r.year] = parseInt(r.count) || 0;
+            for (const r of yearlyDownloadRows) yearDownloadMap[r.year] = parseInt(r.count) || 0;
+
+            for (let i = 4; i >= 0; i--) {
+                const year = currentYear - i;
+                yearlyTrends.push({
+                    year,
+                    new_books: yearMap[year] || 0,
+                    joins: yearJoinMap[year] || 0,
+                    downloads: yearDownloadMap[year] || 0,
+                });
+            }
+
+            // 6. Category distribution + views
             const top5ByCnt = [...catViewRows]
                 .sort((a, b) => (parseInt(b.book_count) || 0) - (parseInt(a.book_count) || 0))
                 .slice(0, 5);
             let categoryDistribution = top5ByCnt.map(r => ({
-                name: r.Category?.name || 'Unknown',
+                name: r.Category?.name || r['Category.name'] || 'Unknown',
                 value: parseInt(r.book_count) || 0,
             }));
             if (categoryDistribution.length === 0) {
@@ -213,23 +340,15 @@ class StatsController {
                 .sort((a, b) => (parseInt(b.total_views) || 0) - (parseInt(a.total_views) || 0))
                 .slice(0, 5);
             const categoryViews = top5ByViews.map(r => ({
-                name: r.Category?.name || 'Unknown',
+                name: r.Category?.name || r['Category.name'] || 'Unknown',
                 views: parseInt(r.total_views) || 0,
                 books: parseInt(r.book_count) || 0,
             }));
 
-            // 4c. Monthly reading stats
-            const monthlyReadingStats = monthRows.map(r => ({
-                month: r.month,
-                views: parseInt(r.total_views) || 0,
-                downloads: parseInt(r.total_downloads) || 0,
-                new_books: parseInt(r.new_books) || 0,
-            }));
-
-            // 5. Recent activities
+            // 7. Recent activities
             const recentActivities = activities.map(act => {
                 const fullName = act.User
-                    ? (`${act.User.firstName } ${act.User.lastName }`).trim() || act.User.username
+                    ? (`${act.User.firstName || ''} ${act.User.lastName || ''}`).trim() || act.User.username
                     : "System";
                 return {
                     id: act.id,
@@ -242,10 +361,14 @@ class StatsController {
                 };
             });
 
-            // 6. Role activity stats
+            // 8. Role activity stats
             const roleMap = {};
             for (const row of roleRows) {
-                const roleName = row.User?.Roles?.name || 'Unknown';
+                const roleName = row.User?.Roles?.name || 
+                                row['User.Roles.name'] || 
+                                row.User?.Roles?.[0]?.name || 
+                                'Unknown';
+                                
                 if (!roleMap[roleName]) roleMap[roleName] = { create_count: 0, update_count: 0, delete_count: 0 };
                 const cnt = parseInt(row.count) || 0;
                 if (row.action === 'created') roleMap[roleName].create_count += cnt;
@@ -272,11 +395,13 @@ class StatsController {
                 upload_stats: uploadStats,
                 category_stats: categoryDistribution,
                 category_views: categoryViews,
-                monthly_reading_stats: monthlyReadingStats,
+                monthly_reading_stats: monthlyTrends, // Unified trend report
+                daily_trends: dailyTrends,           // New: Daily stats
+                yearly_trends: yearlyTrends,         // New: Yearly stats
                 role_activity_stats: roleActivityStats,
                 recent_activities: recentActivities,
                 total_activities: totalCount || 0,
-                _key: cacheKey, // internal cache key
+                _key: cacheKey, 
             };
 
             // Cache the result
