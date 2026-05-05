@@ -17,7 +17,6 @@ const httpServer = http.createServer(app);
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:3001',
-  'https://elibrary-dashboard.vercel.app',
   'https://frontend.samnangchan.shop',
   'https://admin-elibrary.samnangchan.shop',
   'https://admin-elibrary.nortonu.app',
@@ -31,27 +30,17 @@ app.get("/", (req, res) => {
   res.status(200).json({ success: true, message: "E-Library API is running" });
 });
 
-// Debug incoming origins
-app.use((req, res, next) => {
-  console.log('Incoming Origin:', req.headers.origin || 'no origin header');
-  next();
-});
-
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (curl, server-to-server, Postman)
     if (!origin) return callback(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-    console.warn(`CORS blocked: origin "${origin}" not in allowed list`);
     callback(new Error(`CORS: origin "${origin}" not allowed`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-
-// Handle CORS preflight requests
-app.options('*', cors());
 
 app.use(compression());  // gzip/brotli — 30–70% smaller responses
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
