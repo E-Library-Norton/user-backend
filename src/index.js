@@ -17,11 +17,11 @@ const httpServer = http.createServer(app);
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:3001',
-  'https://elibrary-user.vercel.app',
   'https://elibrary-dashboard.vercel.app',
-  'https://frontend-admin-dev.vercel.app',
   'https://frontend.samnangchan.shop',
-  'https://admin-elibrary.samnangchan.shop'
+  'https://admin-elibrary.samnangchan.shop',
+  'https://admin-elibrary.nortonu.app/',
+  'https://elibrary.nortonu.app/',
 ];
 
 // ── Socket.IO (real-time) ─────────────────────────────────────────────────────
