@@ -2,21 +2,17 @@ const nodemailer = require('nodemailer');
 
 function createTransporter() {
   return nodemailer.createTransport({
-    host:   'smtp.gmail.com',
-    port:   587,    // Changed from 465
-    secure: false,  // Must be false for 587
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    family: 4, 
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      pass: process.env.EMAIL_PASS, 
     },
-    tls: {
-      // This helps prevent connection drops on some cloud networks
-      ciphers: 'SSLv3',
-      rejectUnauthorized: false
-    },
-    connectionTimeout: 20000, // Increase to 20s
+    connectionTimeout: 20000,
     greetingTimeout:   20000,
-    socketTimeout:     20000,
+    socketTimeout:     25000,
   });
 }
 
