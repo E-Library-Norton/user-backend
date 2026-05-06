@@ -19,6 +19,8 @@ router.get ('/:id/summary', BookController.getSummary); // AI summary (Gemini, c
 // GET  /:id/download → REQUIRES login — records download + serves as attachment
 router.get('/:id/cover',    DownloadController.getCover);                            // ← public cover
 router.get('/:id/pdf-url',  authenticate,        DownloadController.getPdfUrl);      // ← presigned URL
+router.get('/:id/video-url', authenticate,       DownloadController.getVideoUrl);    // ← presigned video URL
+router.get('/:id/audio-url', authenticate,       DownloadController.getAudioUrl);    // ← presigned audio URL
 router.get('/:id/stream',   DownloadController.streamPdf);                           // ← public proxy
 router.get('/:id/download', authenticateStream,  DownloadController.recordDownload); // ← auth proxy
 

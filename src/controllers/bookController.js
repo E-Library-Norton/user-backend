@@ -53,7 +53,7 @@ class BookController {
         page = 1, limit = 10,
         search, categoryId, publisherId, departmentId, typeId,
         publicationYear, yearFrom, yearTo, language, authorId,
-        isActive, sortBy = 'created_at', sortOrder = 'DESC',
+        isActive, hasVideo, hasAudio, sortBy = 'created_at', sortOrder = 'DESC',
       } = req.query;
 
       const pageNum  = Math.max(1, Number(page));
@@ -69,6 +69,13 @@ class BookController {
       if (departmentId)            where.departmentId    = departmentId;
       if (typeId)                  where.typeId          = typeId;
       if (language)                where.language        = language;
+
+      if (hasVideo === 'true') {
+        where.videoUrl = { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] };
+      }
+      if (hasAudio === 'true') {
+        where.audioUrl = { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] };
+      }
 
       if (publicationYear) {
         where.publicationYear = publicationYear;
@@ -110,7 +117,14 @@ class BookController {
       const books = await Book.findAll({
         where,
         include: BOOK_INCLUDE,
-        attributes: { include: RATING_ATTRIBUTES },
+        attributes: { 
+          include: [
+            ...RATING_ATTRIBUTES,
+            'videoUrl',
+            'audioUrl',
+            'pdfUrls'
+          ] 
+        },
         order:  [[safeSort, safeOrder]],
         limit:  limitNum,
         offset,
@@ -135,7 +149,14 @@ class BookController {
       const book = await Book.findOne({
         where: { id: req.params.id, isDeleted: false },
         include: BOOK_INCLUDE,
-        attributes: { include: RATING_ATTRIBUTES },
+        attributes: { 
+          include: [
+            ...RATING_ATTRIBUTES,
+            'videoUrl',
+            'audioUrl',
+            'pdfUrls'
+          ] 
+        },
       });
       if (!book) throw new NotFoundError('Book not found');
 

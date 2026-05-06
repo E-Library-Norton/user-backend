@@ -247,6 +247,76 @@ class DownloadController {
     }
   }
 
+  /**
+   * GET /api/books/:id/video-url
+   * Returns a short-lived presigned R2 URL for the book's video.
+   * Requires authentication.
+   */
+  static async getVideoUrl(req, res, next) {
+    try {
+      const book = await Book.findOne({
+        where:      { id: req.params.id, isDeleted: false, isActive: true },
+        attributes: ['id', 'title', 'videoUrl'],
+      });
+
+      if (!book)         throw new NotFoundError('Book not found');
+      if (!book.videoUrl) return ResponseFormatter.error(res, 'No video available for this book', 404, 'NO_VIDEO');
+
+      const key = extractKeyFromUrl(book.videoUrl);
+      if (!key) {
+        // Already a public URL — return as-is
+        return ResponseFormatter.success(res, { url: book.videoUrl, expiresIn: 3600 });
+      }
+
+      const url = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+          Bucket:                     BUCKET,
+          Key:                        key,
+          ResponseContentDisposition: 'inline',
+        }),
+        { expiresIn: 3600 },
+      );
+
+      return ResponseFormatter.success(res, { url, expiresIn: 3600 });
+    } catch (err) { next(err); }
+  }
+
+  /**
+   * GET /api/books/:id/audio-url
+   * Returns a short-lived presigned R2 URL for the book's audio.
+   * Requires authentication.
+   */
+  static async getAudioUrl(req, res, next) {
+    try {
+      const book = await Book.findOne({
+        where:      { id: req.params.id, isDeleted: false, isActive: true },
+        attributes: ['id', 'title', 'audioUrl'],
+      });
+
+      if (!book)         throw new NotFoundError('Book not found');
+      if (!book.audioUrl) return ResponseFormatter.error(res, 'No audio available for this book', 404, 'NO_AUDIO');
+
+      const key = extractKeyFromUrl(book.audioUrl);
+      if (!key) {
+        // Already a public URL — return as-is
+        return ResponseFormatter.success(res, { url: book.audioUrl, expiresIn: 3600 });
+      }
+
+      const url = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+          Bucket:                     BUCKET,
+          Key:                        key,
+          ResponseContentDisposition: 'inline',
+        }),
+        { expiresIn: 3600 },
+      );
+
+      return ResponseFormatter.success(res, { url, expiresIn: 3600 });
+    } catch (err) { next(err); }
+  }
+
   // GET /api/downloads — admin: all downloads
   static async getAll(req, res, next) {
     try {
