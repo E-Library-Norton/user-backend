@@ -16,15 +16,27 @@ const MIME_TO_EXT = {
   'image/gif':       '.gif',
   'image/webp':      '.webp',
   'image/svg+xml':   '.svg',
+  'video/mp4':       '.mp4',
+  'video/mpeg':      '.mpeg',
+  'video/quicktime': '.mov',
+  'video/x-msvideo': '.avi',
+  'video/webm':      '.webm',
+  'audio/mpeg':      '.mp3',
+  'audio/wav':       '.wav',
+  'audio/ogg':       '.ogg',
+  'audio/aac':       '.aac',
+  'audio/webm':      '.webm',
 };
 
-const GENERIC = new Set(['file', 'pdf', 'cover', 'avatar', 'blob', 'upload', 'image']);
+const GENERIC = new Set(['file', 'pdf', 'cover', 'avatar', 'blob', 'upload', 'image', 'video', 'audio']);
 
 const FOLDER = {
   cover:  'books/covers',
   pdf:    'books/pdfs',
   avatar: 'avatars',
   file:   'uploads',
+  video:  'media/videos',
+  audio:  'media/audios',
 };
 
 const RESOURCE_TYPE = {
@@ -32,12 +44,15 @@ const RESOURCE_TYPE = {
   pdf:    'raw',
   avatar: 'image',
   file:   'auto',
+  video:  'video',
+  audio:  'raw',
 };
 
 function getResourceType(mimetype = '', fieldName = '') {
   if (RESOURCE_TYPE[fieldName]) return RESOURCE_TYPE[fieldName];
   if (mimetype.startsWith('image/')) return 'image';
   if (mimetype.startsWith('video/')) return 'video';
+  if (mimetype.startsWith('audio/')) return 'raw';
   return 'raw';
 }
 

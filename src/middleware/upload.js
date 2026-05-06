@@ -8,6 +8,8 @@ const fileFilter = (_req, file, cb) => {
     avatar: FILE_TYPES.IMAGE,
     file:   [...FILE_TYPES.IMAGE, FILE_TYPES.PDF],
     image:  FILE_TYPES.IMAGE,
+    video:  FILE_TYPES.VIDEO,
+    audio:  FILE_TYPES.AUDIO,
   };
   const allowed = allowedTypes[file.fieldname];
   if (allowed && (Array.isArray(allowed) ? allowed.includes(file.mimetype) : allowed === file.mimetype)) {
@@ -20,7 +22,7 @@ const fileFilter = (_req, file, cb) => {
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter,
-  limits: { fileSize: MAX_FILE_SIZES.PDF },
+  limits: { fileSize: MAX_FILE_SIZES.VIDEO }, // Use largest size to allow all types
 });
 
 module.exports = {
@@ -28,14 +30,19 @@ module.exports = {
     { name: 'cover',  maxCount: 1 },
     { name: 'pdf',    maxCount: 1 },
     { name: 'file',   maxCount: 1 },
+    { name: 'video',  maxCount: 1 },
+    { name: 'audio',  maxCount: 1 },
   ]),
   uploadMulti: upload.fields([
     { name: 'cover', maxCount: 1 },
     { name: 'pdf',   maxCount: 1 },
+    { name: 'video', maxCount: 1 },
+    { name: 'audio', maxCount: 1 },
   ]),
   uploadScan: upload.fields([
     { name: 'image', maxCount: 1 },
     { name: 'file',  maxCount: 1 },
     { name: 'cover', maxCount: 1 },
-  ]),
+    { name: 'video', maxCount: 1 },
+    { name: 'audio', maxCount: 1 },  ]),
 };

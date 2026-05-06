@@ -73,8 +73,8 @@ for i in {1..500}; do
   "publishers": 1,
   "authors": 1,
   "editors": 3,
-  "categoryId": 7,
-  "departmentId": 7,
+  "categoryId": 6,
+  "departmentId": 3,
   "typeId": 5,
   "isActive": true
 }

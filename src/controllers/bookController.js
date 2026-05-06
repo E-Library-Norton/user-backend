@@ -254,6 +254,8 @@ class BookController {
       // Files are pre-uploaded via POST /api/upload/single — accept URLs from body
       const coverUrl = req.body.coverUrl ?? null;
       const pdfUrl   = req.body.pdfUrl   ?? null;
+      const videoUrl = req.body.videoUrl ?? null;
+      const audioUrl = req.body.audioUrl ?? null;
       // pdfUrls: optional array of additional PDF URLs
       let pdfUrls = req.body.pdfUrls ?? null;
       if (typeof pdfUrls === 'string') {
@@ -263,7 +265,7 @@ class BookController {
 
       const book = await Book.create({
         title, titleKh, isbn, publicationYear, description,
-        coverUrl, pdfUrl, pdfUrls, pages,
+        coverUrl, pdfUrl, pdfUrls, videoUrl, audioUrl, pages,
         categoryId, publisherId, departmentId, typeId, isActive,
       });
 
@@ -411,6 +413,8 @@ class BookController {
       // Files are pre-uploaded via POST /api/upload/single — accept URLs from body
       const coverUrl = req.body.coverUrl;
       const pdfUrl   = req.body.pdfUrl;
+      const videoUrl = req.body.videoUrl;
+      const audioUrl = req.body.audioUrl;
       // pdfUrls: optional array of additional PDF URLs
       let pdfUrls = req.body.pdfUrls;
       if (typeof pdfUrls === 'string') {
@@ -427,6 +431,8 @@ class BookController {
         ...(coverUrl !== undefined && { coverUrl }),
         ...(pdfUrl !== undefined && { pdfUrl }),
         ...(pdfUrls !== undefined && { pdfUrls }),
+        ...(videoUrl !== undefined && { videoUrl }),
+        ...(audioUrl !== undefined && { audioUrl }),
         ...(pages !== undefined && { pages }),
         ...(categoryId !== undefined && { categoryId }),
         ...(publisherId !== undefined && { publisherId }),

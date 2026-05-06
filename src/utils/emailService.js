@@ -65,7 +65,7 @@ async function sendOtpEmail(to, otp, firstName = 'Student') {
               <!-- Expiry notice -->
               <div style="background:#FFF8EC;border:1px solid #F5D98B;border-radius:8px;padding:12px 20px;margin-bottom:24px;">
                 <p style="margin:0;font-size:13px;color:#92620A;">
-                  ⏰ This code expires in <strong>1 minute</strong>. Do not share it with anyone.
+                  ⏰ This code expires in <strong>2 hours</strong>. Do not share it with anyone.
                 </p>
               </div>
 
@@ -91,7 +91,7 @@ async function sendOtpEmail(to, otp, firstName = 'Student') {
 </body>
 </html>
     `,
-    text: `Hi ${name},\n\nYour E-Library NU password reset code is: ${otp}\n\nIt expires in 1 minute. Do not share it.\n\nIf you did not request this, ignore this email.`,
+    text: `Hi ${name},\n\nYour E-Library NU password reset code is: ${otp}\n\nIt expires in 2 hours. Do not share it.\n\nIf you did not request this, ignore this email.`,
   });
 }
 

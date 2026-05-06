@@ -12,12 +12,16 @@ const URL_KEY_MAP = {
   cover:  'cover_url',
   pdf:    'pdf_url',
   avatar: 'avatar_url',
+  video:  'video_url',
+  audio:  'audio_url',
 };
 
 const FOLDER_MAP = {
   cover:  'books/covers',
   pdf:    'books/pdfs',
   avatar: 'users/avatars',
+  video:  'media/videos',
+  audio:  'media/audios',
 };
 
 function buildFileInfo(file, result) {
@@ -33,7 +37,19 @@ function buildFileInfo(file, result) {
 }
 
 function validateSize(file, fieldName) {
-  const maxSize = file.mimetype === 'application/pdf' ? MAX_FILE_SIZES.PDF : MAX_FILE_SIZES.IMAGE;
+  const { MAX_FILE_SIZES, FILE_TYPES } = require('../config/constants');
+  
+  let maxSize;
+  if (file.mimetype === 'application/pdf') {
+    maxSize = MAX_FILE_SIZES.PDF;
+  } else if (FILE_TYPES.VIDEO.includes(file.mimetype)) {
+    maxSize = MAX_FILE_SIZES.VIDEO;
+  } else if (FILE_TYPES.AUDIO.includes(file.mimetype)) {
+    maxSize = MAX_FILE_SIZES.AUDIO;
+  } else {
+    maxSize = MAX_FILE_SIZES.IMAGE;
+  }
+  
   if (file.size > maxSize) {
     return `${fieldName} too large. Max ${maxSize / (1024 * 1024)}MB`;
   }
@@ -42,11 +58,11 @@ function validateSize(file, fieldName) {
 
 class UploadController {
 
-  // POST /api/uploads/single   field: "cover" | "pdf" | "avatar" | "file"
+  // POST /api/uploads/single   field: "cover" | "pdf" | "avatar" | "file" | "video" | "audio"
   static async uploadSingle(req, res, next) {
     try {
       const files     = req.files || {};
-      const fieldName = ['cover', 'pdf', 'avatar', 'file'].find(f => files[f]?.[0]);
+      const fieldName = ['cover', 'pdf', 'avatar', 'file', 'video', 'audio'].find(f => files[f]?.[0]);
       const file      = fieldName ? files[fieldName][0] : req.file;
 
       if (!file) return ResponseFormatter.error(res, 'No file uploaded', 400, 'FILE_REQUIRED');

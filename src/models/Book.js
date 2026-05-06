@@ -47,6 +47,14 @@ const Book = sequelize.define(
       defaultValue: null,
       comment:      'Array of additional PDF file URLs',
     },
+    videoUrl: {
+      type:  DataTypes.STRING(500),
+      field: 'video_url',
+    },
+    audioUrl: {
+      type:  DataTypes.STRING(500),
+      field: 'audio_url',
+    },
     pages: {
       type: DataTypes.INTEGER,
     },
